@@ -56,7 +56,7 @@ cd gderupa
 
 # Kreiraj .env.local sa tvojim Supabase ključevima
 echo 'NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co' > .env.local
-echo 'NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...' >> .env.local
+echo 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...' >> .env.local
 
 # Instaliraj zavisnosti
 npm install

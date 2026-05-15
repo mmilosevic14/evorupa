@@ -23,7 +23,7 @@ v0.1.0 - Alpha
 - **Maps**: Leaflet (OSM) ili Mapbox
 - **PWA**: next-pwa
 - **State**: Zustand
-- **Hosting**: Vercel (recommended)
+- **Hosting**: Cloudflare Pages + Workers
 
 ## ⚙️ Setup
 
@@ -45,7 +45,7 @@ npm install
 
 ### 3. Konfiguracija Supabase
 1. Idi na https://supabase.com i kreiraj nov projekat
-2. Preuzmi `SUPABASE_URL` i `SUPABASE_ANON_KEY` iz projekta
+2. Preuzmi `SUPABASE_URL` i `SUPABASE_PUBLISHABLE_KEY` iz projekta
 3. Kreiraj `.env.local` na osnovu `.env.example`:
 ```bash
 cp .env.example .env.local
@@ -53,7 +53,7 @@ cp .env.example .env.local
 4. Dodaj tvoje Supabase ključeve:
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
 ```
 
 ### 4. Postavljanje baze podataka
@@ -111,7 +111,28 @@ Vidi `SETUP_DATABASE.md` za detaljnu dokumentaciju
 
 ## 🚢 Deployment
 
-### Vercel (preporučeno)
+### Cloudflare Pages + Workers (recommended)
+1. Dodaj secrets u GitHub repozitorijum:
+	- CLOUDFLARE_ACCOUNT_ID
+	- CLOUDFLARE_API_TOKEN
+2. Opcija za automatski sync iz lokalnog env fajla:
+```bash
+npm run sync:cf:secrets
+```
+3. Push na `main` ili `master` branch
+4. GitHub Actions workflow automatski radi build i deploy na Cloudflare Pages
+
+Lokalni build za Cloudflare:
+```bash
+npm run build:cf
+```
+
+Lokalni deploy za Cloudflare:
+```bash
+npm run deploy:cf
+```
+
+### Vercel
 ```bash
 npm install -g vercel
 vercel
@@ -127,7 +148,11 @@ docker run -p 3000:3000 gderupa
 
 - [Setup baze podataka](./SETUP_DATABASE.md)
 - [Plan razvoja](./DEVELOPMENT_PLAN.md)
-- [API Reference](./API_REFERENCE.md)
+- [Početni setup](./GETTING_STARTED.md)
+- [Sažetak projekta](./PROJECT_SUMMARY.md)
+- [Supabase integracija](./SUPABASE_INTEGRATION.md)
+- [Cloudflare hosting](./CLOUDFLARE_HOSTING.md)
+- [Chat handoff](./CHAT_HANDOFF.md)
 - [Supabase dokumentacija](https://supabase.com/docs)
 - [Next.js dokumentacija](https://nextjs.org/docs)
 

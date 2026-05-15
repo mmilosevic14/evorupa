@@ -17,7 +17,7 @@ U Supabase dashboard:
 4. Dodaj u `.env.local`:
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJxx...
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxx...
 ```
 
 ## 3. Kreiraj baze podataka

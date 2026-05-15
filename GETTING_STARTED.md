@@ -35,12 +35,12 @@ Evo korak-po-korak instrukcija za pokretanje projekta:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJxxxxxxxxxxxxxxxxxxxx
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxxxxxxxxxxxxxxxxxxx
 ```
 
 **Gde da nađeš vrednosti:**
 - `SUPABASE_URL`: Settings → API → Project URL
-- `SUPABASE_ANON_KEY`: Settings → API → anon public
+- `SUPABASE_PUBLISHABLE_KEY`: Settings → API → Publishable key
 
 ## Korak 5: Instaliraj NPM zavisnosti
 
@@ -74,7 +74,7 @@ Trebalo bi da vidiš landing page sa glavnom navigacijom.
 
 Ako vidiš grešku, proveri:
 - Da li su `.env.local` vrednosti tačne?
-- Da li si koristio pravi `SUPABASE_URL` i `SUPABASE_ANON_KEY`?
+- Da li si koristio pravi `SUPABASE_URL` i `SUPABASE_PUBLISHABLE_KEY`?
 
 ## Korak 8: Testiraj SQL bazu
 
