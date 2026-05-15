@@ -10,6 +10,7 @@
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
+    "supabase:apply-schema": "powershell -ExecutionPolicy Bypass -File scripts/apply-supabase-schema.ps1",
     "deploy:cf": "npm run build:cf && npx wrangler pages deploy .vercel/output/static --project-name gderupa",
     "sync:cf:secrets": "powershell -ExecutionPolicy Bypass -File scripts/sync-cloudflare-secrets.ps1"
   },
