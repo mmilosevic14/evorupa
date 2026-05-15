@@ -1,8 +1,11 @@
-import { createClient } from '@/utils/supabase/middleware'
-import { type NextRequest } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 
 export const middleware = async (request: NextRequest) => {
-  return createClient(request)
+  return NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  })
 }
 
 export const config = {
