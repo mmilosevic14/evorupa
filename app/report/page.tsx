@@ -108,7 +108,7 @@ export default function ReportPage() {
       }
 
       // Save report to database
-      const { data, error: dbError } = await supabase.from('reports').insert([
+      const { error: dbError } = await supabase.from('reports').insert([
         {
           user_id: user.id,
           title: formData.title,
@@ -250,32 +250,6 @@ export default function ReportPage() {
             }`}
           >
             {loading ? 'Slanje...' : 'Pošalji izveštaj'}
-          </button>
-        </form>
-      </div>
-    </div>
-  )
-}
-
-
-          <div className="mb-6">
-            <label className="block text-sm font-medium mb-2">Opis problema</label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Detaljno opiši problem..."
-              rows={4}
-              required
-            ></textarea>
-          </div>
-
-          <div className="mb-6">
-            <label className="block text-sm font-medium mb-2">Fotografija</label>
-            <input type="file" accept="image/*" className="border border-gray-300 rounded-lg w-full p-2" />
-          </div>
-
-          <button type="submit" className="btn-primary w-full">
-            Pošalji izveštaj
           </button>
         </form>
       </div>

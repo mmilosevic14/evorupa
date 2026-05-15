@@ -1,8 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import MapComponent from '@/components/MapComponent'
+import dynamic from 'next/dynamic'
 import { createClient } from '@/utils/supabase/client'
+
+const MapComponent = dynamic(() => import('@/components/MapComponent'), {
+  ssr: false,
+})
 
 interface Report {
   id: string
@@ -48,13 +52,13 @@ export default function MapPage() {
         { event: '*', schema: 'public', table: 'reports' },
         (payload) => {
           if (payload.eventType === 'INSERT') {
-            setReports([payload.new as Report, ...reports])
+            setReports((prev) => [payload.new as Report, ...prev])
           } else if (payload.eventType === 'UPDATE') {
-            setReports(
-              reports.map((r) => (r.id === payload.new.id ? (payload.new as Report) : r))
+            setReports((prev) =>
+              prev.map((r) => (r.id === payload.new.id ? (payload.new as Report) : r))
             )
           } else if (payload.eventType === 'DELETE') {
-            setReports(reports.filter((r) => r.id !== payload.old.id))
+            setReports((prev) => prev.filter((r) => r.id !== payload.old.id))
           }
         }
       )

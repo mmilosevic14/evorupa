@@ -1,6 +1,5 @@
 import { createClient as createServerClient } from '@/utils/supabase/server'
 import { createClient as createBrowserClient } from '@/utils/supabase/client'
-import type { SupabaseClient } from '@supabase/supabase-js'
 
 // Re-export the client creation functions
 export { createServerClient, createBrowserClient }
