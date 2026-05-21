@@ -10,20 +10,38 @@ type RouteContext = {
 
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { location = [] } = await params
+  const searchParams = request.nextUrl.searchParams
 
   if (location.length > 2) {
     return NextResponse.json(
       {
         error:
-          'Use /api/cities, /api/cities/serbia, or /api/cities/serbia/vojvodina.',
+          'Use /api/cities, /api/cities/{country} (for example /api/cities/serbia), or /api/cities/{country}/{region} (for example /api/cities/serbia/vojvodina).',
       },
       { status: 400 },
     )
   }
 
-  const searchParams = request.nextUrl.searchParams
-  const country = searchParams.get('country') || location[0]
-  const region = searchParams.get('region') || location[1]
+  const queryCountry = searchParams.get('country') || undefined
+  const queryRegion = searchParams.get('region') || undefined
+  const pathCountry = location[0]
+  const pathRegion = location[1]
+
+  if (
+    (queryCountry && pathCountry && queryCountry !== pathCountry) ||
+    (queryRegion && pathRegion && queryRegion !== pathRegion)
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          'Country and region filters must match between the path and query string when both are provided.',
+      },
+      { status: 400 },
+    )
+  }
+
+  const country = queryCountry || pathCountry
+  const region = queryRegion || pathRegion
   const matchedCities = findCities({
     country,
     region,
