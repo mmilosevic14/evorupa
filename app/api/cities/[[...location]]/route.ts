@@ -22,11 +22,11 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   }
 
   const searchParams = request.nextUrl.searchParams
-  const country = searchParams.get('country') ?? location[0]
-  const region = searchParams.get('region') ?? location[1]
+  const country = searchParams.get('country') || location[0]
+  const region = searchParams.get('region') || location[1]
   const matchedCities = findCities({
-    country: country ?? undefined,
-    region: region ?? undefined,
+    country,
+    region,
   })
 
   return NextResponse.json({

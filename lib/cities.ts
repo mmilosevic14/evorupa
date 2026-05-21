@@ -26,7 +26,7 @@ const CITY_CATALOG: City[] = [
   { name: 'Zaječar', country: 'Serbia', region: 'Southern and Eastern Serbia' },
   { name: 'Kruševac', country: 'Serbia', region: 'Southern and Eastern Serbia' },
   { name: 'Bor', country: 'Serbia', region: 'Southern and Eastern Serbia' },
-]
+].sort((left, right) => left.name.localeCompare(right.name))
 
 const normalizeLocation = (value: string) =>
   value
@@ -51,4 +51,4 @@ export const findCities = ({
     (city) =>
       matchesLocation(city.country, country) &&
       matchesLocation(city.region, region),
-  ).sort((left, right) => left.name.localeCompare(right.name))
+  )
