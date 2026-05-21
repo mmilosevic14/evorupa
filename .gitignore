@@ -47,3 +47,4 @@ public/workbox-*.js.map
 .idea/
 *.swp
 *.swo
+*.tsbuildinfo
