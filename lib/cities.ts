@@ -29,10 +29,11 @@ const CITY_CATALOG: City[] = [
 ].sort((left, right) => left.name.localeCompare(right.name))
 
 /** Converts location labels like "Šumadija and Western Serbia" to "sumadija-and-western-serbia". */
-const normalizeLocation = (value: string) =>
+export const normalizeLocation = (value: string) =>
   value
     .trim()
     .normalize('NFKD')
+    // Strip combining marks after normalization so accents and other diacritics do not affect matching.
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')

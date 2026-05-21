@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-import { findCities } from '@/lib/cities'
+import { findCities, normalizeLocation } from '@/lib/cities'
 
 type RouteContext = {
   params: Promise<{
@@ -28,8 +28,12 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const pathRegion = location[1]
 
   if (
-    (queryCountry && pathCountry && queryCountry !== pathCountry) ||
-    (queryRegion && pathRegion && queryRegion !== pathRegion)
+    (queryCountry &&
+      pathCountry &&
+      normalizeLocation(queryCountry) !== normalizeLocation(pathCountry)) ||
+    (queryRegion &&
+      pathRegion &&
+      normalizeLocation(queryRegion) !== normalizeLocation(pathRegion))
   ) {
     return NextResponse.json(
       {
