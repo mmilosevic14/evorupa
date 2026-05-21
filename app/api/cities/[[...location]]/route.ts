@@ -15,7 +15,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json(
       {
         error:
-          'Use /api/cities, /api/cities/[country], or /api/cities/[country]/[region].',
+          'Use /api/cities, /api/cities/serbia, or /api/cities/serbia/vojvodina.',
       },
       { status: 400 },
     )

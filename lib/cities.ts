@@ -28,6 +28,7 @@ const CITY_CATALOG: City[] = [
   { name: 'Bor', country: 'Serbia', region: 'Southern and Eastern Serbia' },
 ].sort((left, right) => left.name.localeCompare(right.name))
 
+/** Converts location labels like "Šumadija and Western Serbia" to "sumadija-and-western-serbia". */
 const normalizeLocation = (value: string) =>
   value
     .trim()
