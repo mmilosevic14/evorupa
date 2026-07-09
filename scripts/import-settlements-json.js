@@ -78,6 +78,9 @@ function normalizeSettlement(settlement) {
 }
 
 const normalizedSettlements = settlements.map(normalizeSettlement)
+const INSERT_COLUMNS = ['name', 'municipality', 'district', 'region', 'place_type', 'latitude', 'longitude']
+const INSERT_BATCH_SIZE = 250
+const MAX_BATCH_RETRIES = 3
 
 for (const settlement of normalizedSettlements) {
   if (!settlement.name || !settlement.municipality || !settlement.place_type) {
@@ -89,47 +92,75 @@ for (const settlement of normalizedSettlements) {
   }
 }
 
-async function main() {
-  const client = new Client({ connectionString: databaseUrl, ssl: { rejectUnauthorized: false } })
+function buildBatchQuery(batch) {
+  const values = []
+  const placeholders = batch.map((settlement, settlementIndex) => {
+    const rowOffset = settlementIndex * INSERT_COLUMNS.length
 
-  await client.connect()
+    values.push(
+      settlement.name,
+      settlement.municipality,
+      settlement.district || null,
+      settlement.region,
+      settlement.place_type,
+      settlement.latitude,
+      settlement.longitude,
+    )
 
-  try {
-    await client.query('BEGIN')
+    return `(${INSERT_COLUMNS.map((_, columnIndex) => `$${rowOffset + columnIndex + 1}`).join(', ')})`
+  })
 
-    for (const settlement of normalizedSettlements) {
-      await client.query(
-        `
-          INSERT INTO public.settlements (name, municipality, district, region, place_type, latitude, longitude)
-          VALUES ($1, $2, $3, $4, $5, $6, $7)
-          ON CONFLICT (name, municipality, district)
-          DO UPDATE SET
-            region = EXCLUDED.region,
-            place_type = EXCLUDED.place_type,
-            latitude = EXCLUDED.latitude,
-            longitude = EXCLUDED.longitude,
-            updated_at = NOW()
-        `,
-        [
-          settlement.name,
-          settlement.municipality,
-          settlement.district || null,
-          settlement.region,
-          settlement.place_type,
-          settlement.latitude,
-          settlement.longitude,
-        ],
-      )
-    }
-
-    await client.query('COMMIT')
-    console.log(`Imported ${normalizedSettlements.length} settlements from ${inputPath}.`)
-  } catch (error) {
-    await client.query('ROLLBACK')
-    throw error
-  } finally {
-    await client.end()
+  return {
+    text: `
+      INSERT INTO public.settlements (${INSERT_COLUMNS.join(', ')})
+      VALUES ${placeholders.join(', ')}
+      ON CONFLICT (name, municipality, district)
+      DO UPDATE SET
+        region = EXCLUDED.region,
+        place_type = EXCLUDED.place_type,
+        latitude = EXCLUDED.latitude,
+        longitude = EXCLUDED.longitude,
+        updated_at = NOW()
+    `,
+    values,
   }
+}
+
+async function runBatch(batch, batchNumber, batchCount) {
+  const query = buildBatchQuery(batch)
+
+  for (let attempt = 1; attempt <= MAX_BATCH_RETRIES; attempt += 1) {
+    const client = new Client({ connectionString: databaseUrl, ssl: { rejectUnauthorized: false } })
+
+    try {
+      await client.connect()
+      await client.query(query.text, query.values)
+      await client.end()
+      console.log(`Imported batch ${batchNumber}/${batchCount} (${batch.length} settlements).`)
+      return
+    } catch (error) {
+      await client.end().catch(() => undefined)
+
+      if (attempt === MAX_BATCH_RETRIES) {
+        throw error
+      }
+
+      console.warn(`Retrying batch ${batchNumber}/${batchCount} after error: ${error.message}`)
+    }
+  }
+}
+
+async function main() {
+  const batchCount = Math.ceil(normalizedSettlements.length / INSERT_BATCH_SIZE)
+
+  for (let batchStartIndex = 0; batchStartIndex < normalizedSettlements.length; batchStartIndex += INSERT_BATCH_SIZE) {
+    const batch = normalizedSettlements.slice(batchStartIndex, batchStartIndex + INSERT_BATCH_SIZE)
+    const batchNumber = Math.floor(batchStartIndex / INSERT_BATCH_SIZE) + 1
+
+    await runBatch(batch, batchNumber, batchCount)
+  }
+
+  console.log(`Imported ${normalizedSettlements.length} settlements from ${inputPath}.`)
 }
 
 main().catch((error) => {

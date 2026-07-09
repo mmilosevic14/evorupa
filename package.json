@@ -12,6 +12,7 @@
     "type-check": "tsc --noEmit",
     "supabase:apply-schema": "powershell -ExecutionPolicy Bypass -File scripts/apply-supabase-schema.ps1",
     "supabase:apply-settlements": "powershell -ExecutionPolicy Bypass -File scripts/apply-serbia-settlements.ps1",
+    "supabase:build-settlements": "powershell -ExecutionPolicy Bypass -File scripts/build-serbia-settlements.ps1",
     "supabase:import-settlements": "powershell -ExecutionPolicy Bypass -File scripts/import-settlements-json.ps1",
     "seed:test-serbia": "node scripts/seed-serbia-test-data.js",
     "deploy:cf": "npm run build:cf && npx wrangler pages deploy .vercel/output/static --project-name evorupa",
