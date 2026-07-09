@@ -1,11 +1,11 @@
 import type { NextConfig } from 'next'
 import withPWA from 'next-pwa'
 
-const isProductionBuild = process.env.NODE_ENV === 'production'
+const distDir = process.env.NEXT_DIST_DIR?.trim() || '.next'
 
 const config: NextConfig = {
   reactStrictMode: true,
-  distDir: isProductionBuild ? '.next-prod' : '.next',
+  distDir,
   eslint: {
     ignoreDuringBuilds: true,
   },
