@@ -10,6 +10,7 @@ const OSM_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
 const OSM_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 const DEFAULT_MAP_CENTER: [number, number] = [44.8176, 20.4554]
+const INDIVIDUAL_MARKER_ZOOM = 13
 
 // Fix Leaflet marker icons
 if (typeof window !== 'undefined') {
@@ -67,69 +68,100 @@ export default function MapComponent({ reports = [] }: { reports?: Report[] }) {
       return
     }
 
-    markersLayer.clearLayers()
-
     const placeGroups = groupReportsByPlace(reports)
     const bounds: [number, number][] = []
 
-    placeGroups.forEach((group) => {
-      const unresolvedReports = group.reports.filter(
-        (report) => report.status !== 'resolved' && report.status !== 'rejected',
-      )
-      const marker = L.marker([group.latitude, group.longitude], {
-        icon: L.divIcon({
-          className: 'place-cluster-icon',
-          html: `
-            <div style="
-              width:44px;
-              height:44px;
-              border-radius:9999px;
-              background:${group.openCount > 0 ? '#dc2626' : '#2563eb'};
-              color:#fff;
-              display:flex;
-              align-items:center;
-              justify-content:center;
-              font-weight:700;
-              border:3px solid rgba(255,255,255,0.9);
-              box-shadow:0 10px 15px rgba(0,0,0,0.2);
-            ">${group.reportCount}</div>
-          `,
-          iconSize: [44, 44],
-          iconAnchor: [22, 22],
-        }),
-      })
-      const popupHtml = `
-        <div class="text-sm" style="min-width:280px;max-width:320px;">
-          <h3 class="font-bold text-base" style="margin-bottom:0.25rem;">${group.label}</h3>
-          ${group.municipality ? `<p class="text-xs text-gray-600" style="margin-bottom:0.25rem;">Opština/grad: ${group.municipality}</p>` : ''}
-          ${group.district ? `<p class="text-xs text-gray-600" style="margin-bottom:0.5rem;">Okrug: ${group.district}</p>` : ''}
-          <p class="text-xs" style="margin-bottom:0.75rem;">Ukupno prijava: <strong>${group.reportCount}</strong> | Otvoreno: <strong>${group.openCount}</strong></p>
-          <div style="display:flex;flex-direction:column;gap:0.75rem;max-height:320px;overflow:auto;">
-            ${group.reports
-              .map((report) => {
-                const photoUrl = getReportPhotoUrl(report.photo_url)
+    const renderMarkers = () => {
+      markersLayer.clearLayers()
 
-                return `
-                  <div style="border-top:1px solid #e5e7eb;padding-top:0.75rem;">
-                    <img
-                      src="${photoUrl}"
-                      alt="${report.title}"
-                      style="width:100%;height:128px;object-fit:cover;border-radius:0.5rem;margin-bottom:0.5rem;background:#f3f4f6;"
-                    />
-                    <h4 style="font-weight:700;margin-bottom:0.25rem;">${report.title}</h4>
-                    <p style="font-size:12px;color:#4b5563;margin-bottom:0.5rem;">${report.description.substring(0, 120)}...</p>
-                    <p style="font-size:12px;"><strong>Status:</strong> ${report.status}</p>
-                  </div>
-                `
-              })
-              .join('')}
+      const shouldShowIndividualReports =
+        placeGroups.length <= 1 || map.getZoom() >= INDIVIDUAL_MARKER_ZOOM
+
+      if (shouldShowIndividualReports) {
+        reports.forEach((report) => {
+          const photoUrl = getReportPhotoUrl(report.photo_url)
+          const marker = L.marker([report.latitude, report.longitude])
+          marker.bindPopup(`
+            <div class="text-sm" style="min-width:260px;max-width:320px;">
+              <img
+                src="${photoUrl}"
+                alt="${report.title}"
+                style="width:100%;height:128px;object-fit:cover;border-radius:0.5rem;margin-bottom:0.75rem;background:#f3f4f6;"
+              />
+              <h3 style="font-weight:700;margin-bottom:0.25rem;">${report.title}</h3>
+              <p style="font-size:12px;color:#4b5563;margin-bottom:0.5rem;">${report.description.substring(0, 160)}...</p>
+              <p style="font-size:12px;margin-bottom:0.25rem;"><strong>Status:</strong> ${report.status}</p>
+              <p style="font-size:12px;"><strong>Koordinate:</strong> ${report.latitude.toFixed(5)}, ${report.longitude.toFixed(5)}</p>
+            </div>
+          `)
+          marker.addTo(markersLayer)
+        })
+
+        return
+      }
+
+      placeGroups.forEach((group) => {
+        const unresolvedReports = group.reports.filter(
+          (report) => report.status !== 'resolved' && report.status !== 'rejected',
+        )
+        const marker = L.marker([group.latitude, group.longitude], {
+          icon: L.divIcon({
+            className: 'place-cluster-icon',
+            html: `
+              <div style="
+                width:44px;
+                height:44px;
+                border-radius:9999px;
+                background:${group.openCount > 0 ? '#dc2626' : '#2563eb'};
+                color:#fff;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                font-weight:700;
+                border:3px solid rgba(255,255,255,0.9);
+                box-shadow:0 10px 15px rgba(0,0,0,0.2);
+              ">${group.reportCount}</div>
+            `,
+            iconSize: [44, 44],
+            iconAnchor: [22, 22],
+          }),
+        })
+        const popupHtml = `
+          <div class="text-sm" style="min-width:280px;max-width:320px;">
+            <h3 class="font-bold text-base" style="margin-bottom:0.25rem;">${group.label}</h3>
+            ${group.municipality ? `<p class="text-xs text-gray-600" style="margin-bottom:0.25rem;">Opština/grad: ${group.municipality}</p>` : ''}
+            ${group.district ? `<p class="text-xs text-gray-600" style="margin-bottom:0.5rem;">Okrug: ${group.district}</p>` : ''}
+            <p class="text-xs" style="margin-bottom:0.75rem;">Ukupno prijava: <strong>${group.reportCount}</strong> | Otvoreno: <strong>${group.openCount}</strong></p>
+            <div style="display:flex;flex-direction:column;gap:0.75rem;max-height:320px;overflow:auto;">
+              ${group.reports
+                .map((report) => {
+                  const photoUrl = getReportPhotoUrl(report.photo_url)
+
+                  return `
+                    <div style="border-top:1px solid #e5e7eb;padding-top:0.75rem;">
+                      <img
+                        src="${photoUrl}"
+                        alt="${report.title}"
+                        style="width:100%;height:128px;object-fit:cover;border-radius:0.5rem;margin-bottom:0.5rem;background:#f3f4f6;"
+                      />
+                      <h4 style="font-weight:700;margin-bottom:0.25rem;">${report.title}</h4>
+                      <p style="font-size:12px;color:#4b5563;margin-bottom:0.5rem;">${report.description.substring(0, 120)}...</p>
+                      <p style="font-size:12px;"><strong>Status:</strong> ${report.status}</p>
+                    </div>
+                  `
+                })
+                .join('')}
+            </div>
+            ${unresolvedReports.length === 0 ? '<p style="margin-top:0.75rem;font-size:12px;color:#16a34a;">Nema otvorenih problema u ovom mestu.</p>' : ''}
           </div>
-          ${unresolvedReports.length === 0 ? '<p style="margin-top:0.75rem;font-size:12px;color:#16a34a;">Nema otvorenih problema u ovom mestu.</p>' : ''}
-        </div>
-      `
+        `
 
-      marker.bindPopup(popupHtml)
-      marker.addTo(markersLayer)
+        marker.bindPopup(popupHtml)
+        marker.addTo(markersLayer)
+      })
+    }
+
+    placeGroups.forEach((group) => {
       bounds.push([group.latitude, group.longitude])
     })
 
@@ -140,10 +172,22 @@ export default function MapComponent({ reports = [] }: { reports?: Report[] }) {
         padding: [32, 32],
       })
     }
+
+    renderMarkers()
+
+    const handleZoomChange = () => {
+      renderMarkers()
+    }
+
+    map.on('zoomend', handleZoomChange)
+
+    return () => {
+      map.off('zoomend', handleZoomChange)
+    }
   }, [reports])
 
   return (
-    <div className="w-full h-96 rounded-lg overflow-hidden shadow-lg">
+    <div className="w-full h-96 rounded-lg overflow-hidden shadow-lg print-map">
       <div ref={containerRef} className="w-full h-full" />
     </div>
   )

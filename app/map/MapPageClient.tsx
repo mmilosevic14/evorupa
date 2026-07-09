@@ -88,9 +88,9 @@ export default function MapPageClient() {
 
   return (
     <main className="min-h-screen bg-gray-100 py-8">
-      <div className="max-w-6xl mx-auto px-4">
-        <h1 className="text-4xl font-bold mb-2">Mapa Problema</h1>
-        <p className="text-gray-600 mb-6">
+      <div className="max-w-6xl mx-auto px-4 print-shell">
+        <h1 className="text-4xl font-bold mb-2 print-page-title">Mapa Problema</h1>
+        <p className="text-gray-600 mb-6 print-page-intro">
           Pregledajte sve prijavljene probleme na infrastrukturi
         </p>
 
@@ -184,16 +184,16 @@ export default function MapPageClient() {
             </div>
 
             <div className="mt-8 bg-white rounded-lg shadow-md p-6 print-area print-card">
-              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between print-header">
                 <div>
                   <h2 className="text-2xl font-bold">Otvoreni problemi za slanje</h2>
-                  <p className="text-gray-600 mt-1">
+                  <p className="text-gray-600 mt-1 print-subtitle">
                     {selectedPlace
                       ? `Mesto: ${selectedPlace.label}${selectedPlace.municipality ? `, ${selectedPlace.municipality}` : ''}`
                       : 'Prikaz svih mesta'}
                   </p>
                 </div>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-500 print-summary">
                   Broj otvorenih problema: <strong>{openReports.length}</strong>
                 </p>
               </div>
@@ -206,21 +206,21 @@ export default function MapPageClient() {
                     const location = parseReportLocation(report.tags)
 
                     return (
-                      <div key={report.id} className="border border-gray-200 rounded-lg p-4 print-card">
-                        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                      <div key={report.id} className="border border-gray-200 rounded-lg p-4 print-card print-item">
+                        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between print-item-layout">
                           <div>
                             <h3 className="font-bold text-lg">{report.title}</h3>
-                            <p className="text-sm text-gray-600 mt-1">{report.description}</p>
-                            <div className="mt-3 flex flex-wrap gap-2">
-                              <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
+                            <p className="text-sm text-gray-600 mt-1 print-description">{report.description}</p>
+                            <div className="mt-3 flex flex-wrap gap-2 print-tags">
+                              <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs print-tag">
                                 {report.category}
                               </span>
-                              <span className="inline-block bg-red-100 text-red-800 px-2 py-1 rounded text-xs">
+                              <span className="inline-block bg-red-100 text-red-800 px-2 py-1 rounded text-xs print-tag">
                                 {report.status}
                               </span>
                             </div>
                           </div>
-                          <div className="text-sm text-gray-600 md:text-right">
+                          <div className="text-sm text-gray-600 md:text-right print-meta">
                             <p><strong>Mesto:</strong> {getReportPlaceLabel(report)}</p>
                             {location.municipality && <p><strong>Opština:</strong> {location.municipality}</p>}
                             {location.district && <p><strong>Okrug:</strong> {location.district}</p>}
@@ -234,7 +234,7 @@ export default function MapPageClient() {
               )}
             </div>
 
-            <div className="mt-8 bg-white rounded-lg shadow-md p-6">
+            <div className="mt-8 bg-white rounded-lg shadow-md p-6 no-print">
               <h2 className="text-2xl font-bold mb-4">
                 Prijavljeni problemi ({selectedReports.length})
               </h2>
