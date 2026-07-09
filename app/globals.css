@@ -155,12 +155,22 @@ select {
   }
 
   .print-map {
+    width: 100% !important;
+    max-width: 186mm !important;
+    height: 120mm !important;
+    max-height: 120mm !important;
+    margin: 0 auto 1.25rem !important;
     margin-bottom: 1.25rem !important;
     box-shadow: none !important;
     background: #fff !important;
+    overflow: hidden !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 
   .leaflet-container {
+    width: 100% !important;
+    height: 100% !important;
     border-radius: 0 !important;
     box-shadow: none !important;
     background: #fff !important;
