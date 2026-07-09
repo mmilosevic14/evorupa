@@ -1,9 +1,9 @@
 'use client'
 
 import { createBrowserClient } from '@supabase/ssr'
+import { getSupabaseConfig } from '@/lib/supabaseConfig'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+const { url: supabaseUrl, publishableKey: supabaseKey } = getSupabaseConfig()
 
 export const createClient = () =>
-  createBrowserClient(supabaseUrl!, supabaseKey!)
+  createBrowserClient(supabaseUrl, supabaseKey)

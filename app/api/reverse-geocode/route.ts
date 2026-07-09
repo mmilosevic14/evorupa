@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getSupabaseConfig } from '@/lib/supabaseConfig'
 import {
   EMBEDDED_SERBIA_SETTLEMENTS,
   findNearestSettlement,
@@ -20,12 +21,7 @@ async function loadDatabaseSettlements() {
     return cachedSettlements
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-
-  if (!supabaseUrl || !supabaseKey) {
-    return []
-  }
+  const { url: supabaseUrl, publishableKey: supabaseKey } = getSupabaseConfig()
 
   const supabase = createClient(supabaseUrl, supabaseKey)
   const { data, error } = await supabase

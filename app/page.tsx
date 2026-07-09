@@ -1,6 +1,36 @@
 import Link from 'next/link'
+import { createClient } from '@supabase/supabase-js'
+import { getSupabaseConfig } from '@/lib/supabaseConfig'
+import { getReportPlaceLabel, groupReportsByPlace, isOpenReport } from '@/lib/reportLocation'
+import type { Report } from '@/lib/supabase'
 
-export default function Home() {
+export const dynamic = 'force-dynamic'
+export const runtime = 'edge'
+
+async function loadReports() {
+  const { url, publishableKey } = getSupabaseConfig()
+  const supabase = createClient(url, publishableKey)
+  const { data, error } = await supabase
+    .from('reports')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(100)
+
+  if (error || !data) {
+    console.error('Home page reports load failed:', error)
+    return [] as Report[]
+  }
+
+  return data as Report[]
+}
+
+export default async function Home() {
+  const reports = await loadReports()
+  const openReports = reports.filter((report) => isOpenReport(report))
+  const placeGroups = groupReportsByPlace(reports)
+  const featuredPlaces = placeGroups.slice(0, 6)
+  const featuredReports = openReports.slice(0, 6)
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary to-secondary text-white">
       <section className="max-w-6xl mx-auto px-4 py-20 text-center">
@@ -17,6 +47,20 @@ export default function Home() {
           <Link href="/report" className="btn-secondary inline-block">
             Prijavi problem
           </Link>
+        </div>
+        <div className="mt-12 grid grid-cols-1 gap-4 text-left md:grid-cols-3">
+          <div className="rounded-2xl bg-white/10 p-5 backdrop-blur-sm">
+            <p className="text-sm text-blue-100">Ukupno prijava</p>
+            <p className="mt-2 text-4xl font-bold">{reports.length}</p>
+          </div>
+          <div className="rounded-2xl bg-white/10 p-5 backdrop-blur-sm">
+            <p className="text-sm text-blue-100">Otvoreni problemi</p>
+            <p className="mt-2 text-4xl font-bold">{openReports.length}</p>
+          </div>
+          <div className="rounded-2xl bg-white/10 p-5 backdrop-blur-sm">
+            <p className="text-sm text-blue-100">Mesta sa prijavama</p>
+            <p className="mt-2 text-4xl font-bold">{placeGroups.length}</p>
+          </div>
         </div>
       </section>
 
@@ -40,6 +84,78 @@ export default function Home() {
               <div className="text-4xl mb-4">✓</div>
               <h4 className="font-bold text-lg mb-2">3. Prijavi</h4>
               <p>Pošalji detaljan izveštaj lokalnoj upravi</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-slate-100 text-gray-900 py-20">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h3 className="text-3xl font-bold">Pregled prijava</h3>
+              <p className="text-gray-600 mt-2">
+                Najaktivnija mesta i najnoviji otvoreni problemi direktno sa mape.
+              </p>
+            </div>
+            <Link href="/map" className="text-primary font-semibold hover:underline">
+              Otvori celu mapu
+            </Link>
+          </div>
+
+          <div className="mt-10 grid gap-8 lg:grid-cols-2">
+            <div className="rounded-2xl bg-white p-6 shadow-md">
+              <h4 className="text-xl font-bold">Najaktivnija mesta</h4>
+              {featuredPlaces.length === 0 ? (
+                <p className="mt-4 text-gray-600">Još nema prijava za prikaz.</p>
+              ) : (
+                <div className="mt-4 space-y-3">
+                  {featuredPlaces.map((group) => (
+                    <div key={group.key} className="flex items-start justify-between gap-4 rounded-xl border border-gray-200 p-4">
+                      <div>
+                        <p className="font-semibold">{group.label}</p>
+                        {group.municipality && (
+                          <p className="text-sm text-gray-600">Opština/grad: {group.municipality}</p>
+                        )}
+                        {group.district && (
+                          <p className="text-sm text-gray-600">Okrug: {group.district}</p>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-gray-500">Ukupno</p>
+                        <p className="text-2xl font-bold">{group.reportCount}</p>
+                        <p className="text-sm text-red-700">Otvoreno: {group.openCount}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-2xl bg-white p-6 shadow-md">
+              <h4 className="text-xl font-bold">Otvoreni problemi</h4>
+              {featuredReports.length === 0 ? (
+                <p className="mt-4 text-gray-600">Nema otvorenih problema za prikaz.</p>
+              ) : (
+                <div className="mt-4 space-y-3">
+                  {featuredReports.map((report) => (
+                    <div key={report.id} className="rounded-xl border border-gray-200 p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="font-semibold">{report.title}</p>
+                          <p className="mt-1 text-sm text-gray-600">{report.description}</p>
+                          <p className="mt-2 text-sm text-gray-500">
+                            Mesto: {getReportPlaceLabel(report)}
+                          </p>
+                        </div>
+                        <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
+                          {report.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
