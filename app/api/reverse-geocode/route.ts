@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getSupabaseConfig } from '@/lib/supabaseConfig'
+import { findSerbiaDistrictByPoint } from '@/lib/serbiaDistricts'
 import {
   EMBEDDED_SERBIA_SETTLEMENTS,
   findNearestSettlement,
@@ -54,6 +55,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Invalid coordinates.' }, { status: 400 })
   }
 
+  const districtMatch = findSerbiaDistrictByPoint(latitude, longitude)
+
   const databaseSettlements = await loadDatabaseSettlements()
   const nearestDatabaseSettlement = findNearestSettlement(
     latitude,
@@ -62,7 +65,13 @@ export async function GET(request: Request) {
   )
 
   if (nearestDatabaseSettlement) {
-    return NextResponse.json(settlementToLocationDetails(nearestDatabaseSettlement))
+    const nearestDatabaseLocation = settlementToLocationDetails(nearestDatabaseSettlement)
+
+    return NextResponse.json({
+      ...nearestDatabaseLocation,
+      district: districtMatch?.district ?? nearestDatabaseLocation.district,
+      region: districtMatch?.region ?? nearestDatabaseLocation.region,
+    })
   }
 
   const nominatimUrl = new URL('https://nominatim.openstreetmap.org/reverse')
@@ -120,8 +129,8 @@ export async function GET(request: Request) {
       placeName,
       placeType,
       municipality: firstString(address.city, address.town, address.municipality, address.county, placeName),
-      district: firstString(address.state_district, address.county),
-      region: firstString(address.state, address.region, address.country, 'Srbija'),
+      district: districtMatch?.district ?? firstString(address.state_district, address.county),
+      region: districtMatch?.region ?? firstString(address.state, address.region, address.country, 'Srbija'),
     })
   } catch (error) {
     console.error('Reverse geocoding error:', error)
@@ -133,15 +142,21 @@ export async function GET(request: Request) {
     )
 
     if (nearestEmbeddedSettlement) {
-      return NextResponse.json(settlementToLocationDetails(nearestEmbeddedSettlement))
+      const nearestEmbeddedLocation = settlementToLocationDetails(nearestEmbeddedSettlement)
+
+      return NextResponse.json({
+        ...nearestEmbeddedLocation,
+        district: districtMatch?.district ?? nearestEmbeddedLocation.district,
+        region: districtMatch?.region ?? nearestEmbeddedLocation.region,
+      })
     }
 
     return NextResponse.json({
       placeName: '',
       placeType: 'unknown',
       municipality: '',
-      district: '',
-      region: 'Srbija',
+      district: districtMatch?.district ?? '',
+      region: districtMatch?.region ?? 'Srbija',
     })
   }
 }
