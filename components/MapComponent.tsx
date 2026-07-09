@@ -2,10 +2,14 @@
 
 import L from 'leaflet'
 import { useEffect, useRef } from 'react'
+import { getReportPhotoUrl } from '@/lib/reportMedia'
+import type { Report } from '@/lib/supabase'
+import { groupReportsByPlace } from '@/lib/reportLocation'
 
 const OSM_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
 const OSM_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+const DEFAULT_MAP_CENTER: [number, number] = [44.8176, 20.4554]
 
 // Fix Leaflet marker icons
 if (typeof window !== 'undefined') {
@@ -17,24 +21,10 @@ if (typeof window !== 'undefined') {
   })
 }
 
-interface Report {
-  id: string
-  title: string
-  description: string
-  latitude: number
-  longitude: number
-  category: string
-  status: string
-  photo_url?: string
-}
-
 export default function MapComponent({ reports = [] }: { reports?: Report[] }) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<L.Map | null>(null)
   const markersLayerRef = useRef<L.LayerGroup | null>(null)
-
-  // Default center to Serbia (Belgrade area)
-  const center: [number, number] = [44.8176, 20.4554]
 
   useEffect(() => {
     const container = containerRef.current
@@ -44,7 +34,7 @@ export default function MapComponent({ reports = [] }: { reports?: Report[] }) {
     }
 
     const map = L.map(container, {
-      center,
+      center: DEFAULT_MAP_CENTER,
       zoom: 7,
       preferCanvas: true,
       fadeAnimation: false,
@@ -79,26 +69,77 @@ export default function MapComponent({ reports = [] }: { reports?: Report[] }) {
 
     markersLayer.clearLayers()
 
-    reports.forEach((report) => {
-      const marker = L.marker([report.latitude, report.longitude])
+    const placeGroups = groupReportsByPlace(reports)
+    const bounds: [number, number][] = []
+
+    placeGroups.forEach((group) => {
+      const unresolvedReports = group.reports.filter(
+        (report) => report.status !== 'resolved' && report.status !== 'rejected',
+      )
+      const marker = L.marker([group.latitude, group.longitude], {
+        icon: L.divIcon({
+          className: 'place-cluster-icon',
+          html: `
+            <div style="
+              width:44px;
+              height:44px;
+              border-radius:9999px;
+              background:${group.openCount > 0 ? '#dc2626' : '#2563eb'};
+              color:#fff;
+              display:flex;
+              align-items:center;
+              justify-content:center;
+              font-weight:700;
+              border:3px solid rgba(255,255,255,0.9);
+              box-shadow:0 10px 15px rgba(0,0,0,0.2);
+            ">${group.reportCount}</div>
+          `,
+          iconSize: [44, 44],
+          iconAnchor: [22, 22],
+        }),
+      })
       const popupHtml = `
-        <div class="text-sm">
-          <h3 class="font-bold text-sm">${report.title}</h3>
-          <p class="text-gray-600 text-xs">${report.description.substring(0, 100)}...</p>
-          <span class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs mt-2">${report.category}</span>
-          <span class="inline-block ml-2 px-2 py-1 rounded text-xs ${
-            report.status === 'resolved'
-              ? 'bg-green-100 text-green-800'
-              : report.status === 'in_progress'
-                ? 'bg-yellow-100 text-yellow-800'
-                : 'bg-red-100 text-red-800'
-          }">${report.status}</span>
+        <div class="text-sm" style="min-width:280px;max-width:320px;">
+          <h3 class="font-bold text-base" style="margin-bottom:0.25rem;">${group.label}</h3>
+          ${group.municipality ? `<p class="text-xs text-gray-600" style="margin-bottom:0.25rem;">Opština/grad: ${group.municipality}</p>` : ''}
+          ${group.district ? `<p class="text-xs text-gray-600" style="margin-bottom:0.5rem;">Okrug: ${group.district}</p>` : ''}
+          <p class="text-xs" style="margin-bottom:0.75rem;">Ukupno prijava: <strong>${group.reportCount}</strong> | Otvoreno: <strong>${group.openCount}</strong></p>
+          <div style="display:flex;flex-direction:column;gap:0.75rem;max-height:320px;overflow:auto;">
+            ${group.reports
+              .map((report) => {
+                const photoUrl = getReportPhotoUrl(report.photo_url)
+
+                return `
+                  <div style="border-top:1px solid #e5e7eb;padding-top:0.75rem;">
+                    <img
+                      src="${photoUrl}"
+                      alt="${report.title}"
+                      style="width:100%;height:128px;object-fit:cover;border-radius:0.5rem;margin-bottom:0.5rem;background:#f3f4f6;"
+                    />
+                    <h4 style="font-weight:700;margin-bottom:0.25rem;">${report.title}</h4>
+                    <p style="font-size:12px;color:#4b5563;margin-bottom:0.5rem;">${report.description.substring(0, 120)}...</p>
+                    <p style="font-size:12px;"><strong>Status:</strong> ${report.status}</p>
+                  </div>
+                `
+              })
+              .join('')}
+          </div>
+          ${unresolvedReports.length === 0 ? '<p style="margin-top:0.75rem;font-size:12px;color:#16a34a;">Nema otvorenih problema u ovom mestu.</p>' : ''}
         </div>
       `
 
       marker.bindPopup(popupHtml)
       marker.addTo(markersLayer)
+      bounds.push([group.latitude, group.longitude])
     })
+
+    if (bounds.length === 1) {
+      map.setView(bounds[0], 11)
+    } else if (bounds.length > 1) {
+      map.fitBounds(bounds, {
+        padding: [32, 32],
+      })
+    }
   }, [reports])
 
   return (

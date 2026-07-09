@@ -1,5 +1,5 @@
 param(
-  [string]$Repo = "mmilosevic14/gderupa",
+  [string]$Repo = "mmilosevic14/evorupa",
   [string]$EnvFile = ".env.cloudflare.local"
 )
 

@@ -1,8 +1,8 @@
-# GDeRupa - Development Complete! 🎉
+# EvoRupa - Development Complete! 🎉
 
 ## What Was Done
 
-The GDeRupa infrastructure problem reporting app has been fully implemented and is ready for deployment to Cloudflare Pages.
+The EvoRupa infrastructure problem reporting app has been fully implemented and is ready for deployment to Cloudflare Pages.
 
 ---
 
@@ -125,7 +125,7 @@ In Supabase Settings → Auth:
 ```
 Authorized redirect URLs:
 - http://localhost:3000
-- https://gderupa.pages.dev
+- https://evorupa.pages.dev
 ```
 
 ### Step 9: Deploy

@@ -1,4 +1,4 @@
-# GDeRupa - Complete Build & Deploy Guide
+# EvoRupa - Complete Build & Deploy Guide
 
 ## Prerequisites
 
@@ -114,7 +114,7 @@ Value: [Your Cloudflare API Token]
 
 ```bash
 git add .
-git commit -m "Initial commit: GDeRupa project with map and reporting"
+git commit -m "Initial commit: EvoRupa project with map and reporting"
 git push origin main
 ```
 
@@ -129,7 +129,7 @@ git push origin main
 3. Go to **Pages** → **Create a project**
 4. Select **Connect to Git**
 5. Authorize GitHub
-6. Select your `gderupa` repository
+6. Select your `evorupa` repository
 7. Configure build settings:
    - **Framework preset**: Next.js
    - **Build command**: `npm run build:cf`
@@ -151,7 +151,7 @@ After getting your Cloudflare Pages URL:
 
 1. Go to **Supabase Dashboard → Settings → Auth**
 2. Under **Authorized redirect URLs**, add:
-   - Your production URL (e.g., `https://gderupa.pages.dev`)
+   - Your production URL (e.g., `https://evorupa.pages.dev`)
    - Any preview URLs you'll use
    - Keep `http://localhost:3000` for local development
 

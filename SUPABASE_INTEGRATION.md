@@ -1,4 +1,4 @@
-# GDeRupa - Supabase Integration Guide
+# EvoRupa - Supabase Integration Guide
 
 ## ✅ What's Been Setup
 

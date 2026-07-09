@@ -1,9 +1,188 @@
 'use client'
 
+import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { syncUserProfile } from '@/utils/supabase/profile'
+import { DEFAULT_REPORT_PHOTO_URL } from '@/lib/reportMedia'
+import { buildLocationTags, type ReportLocationDetails } from '@/lib/reportLocation'
+
+const DEFAULT_REPORT_LOCATION = {
+  latitude: 44.0165,
+  longitude: 21.0059,
+}
+
+type LocationSource = 'default' | 'browser' | 'photo'
+
+function requestBrowserLocation(
+  onSuccess: (coords: { latitude: number; longitude: number }) => void,
+  onError: (message: string) => void,
+) {
+  if (!navigator.geolocation) {
+    onError('Pregledač ne podržava geolokaciju. Koristi se podrazumevana lokacija u Srbiji.')
+    return
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      onSuccess({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      })
+    },
+    (geoError) => {
+      console.error('Greška pri preuzimanju lokacije:', geoError)
+      onError('Nije moguće preuzeti trenutnu lokaciju. Koristi se podrazumevana lokacija u Srbiji ili GPS iz fotografije ako postoji.')
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 300000,
+    },
+  )
+}
+
+function getString(view: DataView, start: number, length: number) {
+  let result = ''
+
+  for (let index = 0; index < length; index += 1) {
+    result += String.fromCharCode(view.getUint8(start + index))
+  }
+
+  return result
+}
+
+function getExifValue(view: DataView, offset: number, littleEndian: boolean) {
+  const type = view.getUint16(offset + 2, littleEndian)
+  const count = view.getUint32(offset + 4, littleEndian)
+  const valueOffset = offset + 8
+  const actualOffset =
+    type === 2 && count > 4
+      ? view.getUint32(valueOffset, littleEndian) + 12
+      : type === 5 && count >= 1
+        ? view.getUint32(valueOffset, littleEndian) + 12
+        : valueOffset
+
+  if (type === 2) {
+    return getString(view, actualOffset, count - 1)
+  }
+
+  if (type === 5) {
+    const values: number[] = []
+
+    for (let index = 0; index < count; index += 1) {
+      const rationalOffset = actualOffset + index * 8
+      const numerator = view.getUint32(rationalOffset, littleEndian)
+      const denominator = view.getUint32(rationalOffset + 4, littleEndian)
+
+      values.push(denominator === 0 ? 0 : numerator / denominator)
+    }
+
+    return values
+  }
+
+  return null
+}
+
+function convertExifCoordinate(values: number[], ref: string) {
+  const [degrees = 0, minutes = 0, seconds = 0] = values
+  const decimal = degrees + minutes / 60 + seconds / 3600
+
+  return ref === 'S' || ref === 'W' ? -decimal : decimal
+}
+
+async function extractGpsCoordinates(file: File) {
+  if (file.type !== 'image/jpeg' && file.type !== 'image/jpg') {
+    return null
+  }
+
+  const buffer = await file.arrayBuffer()
+  const view = new DataView(buffer)
+
+  if (view.getUint16(0) !== 0xffd8) {
+    return null
+  }
+
+  let offset = 2
+
+  while (offset < view.byteLength) {
+    const marker = view.getUint16(offset)
+    offset += 2
+
+    if (marker === 0xffda || marker === 0xffd9) {
+      break
+    }
+
+    const segmentLength = view.getUint16(offset)
+
+    if (marker === 0xffe1 && getString(view, offset + 2, 4) === 'Exif') {
+      const tiffOffset = offset + 8
+      const littleEndian = getString(view, tiffOffset, 2) === 'II'
+      const firstIfdOffset = view.getUint32(tiffOffset + 4, littleEndian)
+      const ifd0Offset = tiffOffset + firstIfdOffset
+      const ifd0Entries = view.getUint16(ifd0Offset, littleEndian)
+
+      let gpsIfdPointer = 0
+
+      for (let index = 0; index < ifd0Entries; index += 1) {
+        const entryOffset = ifd0Offset + 2 + index * 12
+        const tag = view.getUint16(entryOffset, littleEndian)
+
+        if (tag === 0x8825) {
+          gpsIfdPointer = view.getUint32(entryOffset + 8, littleEndian)
+          break
+        }
+      }
+
+      if (!gpsIfdPointer) {
+        return null
+      }
+
+      const gpsIfdOffset = tiffOffset + gpsIfdPointer
+      const gpsEntries = view.getUint16(gpsIfdOffset, littleEndian)
+      let latitudeRef = ''
+      let longitudeRef = ''
+      let latitudeValues: number[] | null = null
+      let longitudeValues: number[] | null = null
+
+      for (let index = 0; index < gpsEntries; index += 1) {
+        const entryOffset = gpsIfdOffset + 2 + index * 12
+        const tag = view.getUint16(entryOffset, littleEndian)
+        const value = getExifValue(view, entryOffset, littleEndian)
+
+        if (tag === 0x0001 && typeof value === 'string') {
+          latitudeRef = value
+        }
+
+        if (tag === 0x0002 && Array.isArray(value)) {
+          latitudeValues = value
+        }
+
+        if (tag === 0x0003 && typeof value === 'string') {
+          longitudeRef = value
+        }
+
+        if (tag === 0x0004 && Array.isArray(value)) {
+          longitudeValues = value
+        }
+      }
+
+      if (latitudeRef && longitudeRef && latitudeValues && longitudeValues) {
+        return {
+          latitude: convertExifCoordinate(latitudeValues, latitudeRef),
+          longitude: convertExifCoordinate(longitudeValues, longitudeRef),
+        }
+      }
+
+      return null
+    }
+
+    offset += segmentLength
+  }
+
+  return null
+}
 
 interface FormData {
   title: string
@@ -14,13 +193,21 @@ interface FormData {
   photo?: File | null
 }
 
+const EMPTY_LOCATION_DETAILS: ReportLocationDetails = {
+  placeName: '',
+  placeType: 'unknown',
+  municipality: '',
+  district: '',
+  region: 'Srbija',
+}
+
 export default function ReportPageClient() {
   const [formData, setFormData] = useState<FormData>({
     title: '',
     description: '',
     category: 'road_damage',
-    latitude: 0,
-    longitude: 0,
+    latitude: DEFAULT_REPORT_LOCATION.latitude,
+    longitude: DEFAULT_REPORT_LOCATION.longitude,
     photo: null,
   })
   const [photoPreview, setPhotoPreview] = useState<string>('')
@@ -28,6 +215,12 @@ export default function ReportPageClient() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [user, setUser] = useState<any>(null)
+  const [locationSource, setLocationSource] = useState<LocationSource>('default')
+  const [locationDetails, setLocationDetails] = useState<ReportLocationDetails>(EMPTY_LOCATION_DETAILS)
+  const [locationDetailsLoading, setLocationDetailsLoading] = useState(false)
+  const [locationMessage, setLocationMessage] = useState(
+    'Pokušaćemo da preuzmemo vašu trenutnu lokaciju. Ako ne uspe, koristi se podrazumevana lokacija u Srbiji.',
+  )
   const router = useRouter()
 
   useEffect(() => {
@@ -41,30 +234,98 @@ export default function ReportPageClient() {
 
     checkAuth()
 
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setFormData((prev) => ({
-            ...prev,
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          }))
-        },
-        (geoError) => console.error('Greška pri preuzimanju lokacije:', geoError),
-      )
-    }
+    requestBrowserLocation(
+      (coords) => {
+        setFormData((prev) => ({
+          ...prev,
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+        }))
+        setLocationSource('browser')
+        setLocationMessage('Koristi se vaša trenutna lokacija.')
+      },
+      (message) => {
+        setLocationSource('default')
+        setLocationMessage(message)
+      },
+    )
   }, [])
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    let ignore = false
+
+    const resolvePlaceDetails = async () => {
+      setLocationDetailsLoading(true)
+
+      try {
+        const response = await fetch(
+          `/api/reverse-geocode?latitude=${formData.latitude}&longitude=${formData.longitude}`,
+        )
+
+        if (!response.ok) {
+          throw new Error('Neuspešno preuzimanje mesta prema koordinatama.')
+        }
+
+        const data = (await response.json()) as ReportLocationDetails
+
+        if (!ignore) {
+          setLocationDetails({
+            placeName: data.placeName ?? '',
+            placeType: data.placeType ?? 'unknown',
+            municipality: data.municipality ?? '',
+            district: data.district ?? '',
+            region: data.region ?? 'Srbija',
+          })
+        }
+      } catch (locationError) {
+        console.error('Greška pri preuzimanju mesta:', locationError)
+
+        if (!ignore) {
+          setLocationDetails((prev) => ({
+            ...prev,
+            region: prev.region || 'Srbija',
+          }))
+        }
+      } finally {
+        if (!ignore) {
+          setLocationDetailsLoading(false)
+        }
+      }
+    }
+
+    resolvePlaceDetails()
+
+    return () => {
+      ignore = true
+    }
+  }, [formData.latitude, formData.longitude])
+
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      setFormData({ ...formData, photo: file })
+      setFormData((prev) => ({ ...prev, photo: file }))
 
       const reader = new FileReader()
       reader.onloadend = () => {
         setPhotoPreview(reader.result as string)
       }
       reader.readAsDataURL(file)
+
+      const photoCoordinates = await extractGpsCoordinates(file)
+
+      if (photoCoordinates && locationSource !== 'browser') {
+        setFormData((prev) => ({
+          ...prev,
+          latitude: photoCoordinates.latitude,
+          longitude: photoCoordinates.longitude,
+        }))
+        setLocationSource('photo')
+        setLocationMessage('Lokacija je preuzeta iz GPS podataka fotografije.')
+      } else if (!photoCoordinates && locationSource !== 'browser') {
+        setLocationMessage(
+          'Fotografija nema GPS podatke. Koristi se podrazumevana lokacija u Srbiji dok ne odobrite geolokaciju.',
+        )
+      }
     }
   }
 
@@ -83,7 +344,7 @@ export default function ReportPageClient() {
 
       await syncUserProfile(supabase, user)
 
-      let photoUrl = null
+      let photoUrl = DEFAULT_REPORT_PHOTO_URL
 
       if (formData.photo) {
         const fileExt = formData.photo.name.split('.').pop()
@@ -116,6 +377,11 @@ export default function ReportPageClient() {
           longitude: formData.longitude,
           photo_url: photoUrl,
           status: 'pending',
+          priority: 'medium',
+          tags: buildLocationTags(locationDetails),
+          upvotes: 0,
+          views: 0,
+          resolved_at: null,
         },
       ])
 
@@ -221,11 +487,13 @@ export default function ReportPageClient() {
                 className="w-full"
               />
               {photoPreview && (
-                <div className="mt-4">
-                  <img
+                <div className="relative mt-4 h-48 overflow-hidden rounded-lg">
+                  <Image
                     src={photoPreview}
                     alt="Preview"
-                    className="max-w-full h-48 object-cover rounded-lg"
+                    fill
+                    unoptimized
+                    className="object-cover"
                   />
                 </div>
               )}
@@ -236,6 +504,86 @@ export default function ReportPageClient() {
             <p className="text-sm text-gray-700">
               <strong>Lokacija:</strong> {formData.latitude.toFixed(4)}, {formData.longitude.toFixed(4)}
             </p>
+            <p className="mt-2 text-sm text-gray-600">{locationMessage}</p>
+            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium mb-2">Mesto / naselje</label>
+                <input
+                  type="text"
+                  value={locationDetails.placeName}
+                  onChange={(e) =>
+                    setLocationDetails((prev) => ({ ...prev, placeName: e.target.value }))
+                  }
+                  placeholder={locationDetailsLoading ? 'Prepoznavanje mesta...' : 'npr. Kraljevo'}
+                  className="w-full"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Opština / grad</label>
+                <input
+                  type="text"
+                  value={locationDetails.municipality}
+                  onChange={(e) =>
+                    setLocationDetails((prev) => ({ ...prev, municipality: e.target.value }))
+                  }
+                  placeholder="npr. Kraljevo"
+                  className="w-full"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Okrug</label>
+                <input
+                  type="text"
+                  value={locationDetails.district}
+                  onChange={(e) =>
+                    setLocationDetails((prev) => ({ ...prev, district: e.target.value }))
+                  }
+                  placeholder="npr. Raški upravni okrug"
+                  className="w-full"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Region</label>
+                <input
+                  type="text"
+                  value={locationDetails.region}
+                  onChange={(e) =>
+                    setLocationDetails((prev) => ({ ...prev, region: e.target.value }))
+                  }
+                  placeholder="npr. Centralna Srbija"
+                  className="w-full"
+                />
+              </div>
+            </div>
+            {locationDetails.placeType && locationDetails.placeType !== 'unknown' && (
+              <p className="mt-3 text-sm text-gray-600">
+                Prepoznat tip mesta: <strong>{locationDetails.placeType}</strong>
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setLocationMessage('Ponovo pokušavamo da preuzmemo trenutnu lokaciju...')
+
+                requestBrowserLocation(
+                  (coords) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      latitude: coords.latitude,
+                      longitude: coords.longitude,
+                    }))
+                    setLocationSource('browser')
+                    setLocationMessage('Koristi se vaša trenutna lokacija.')
+                  },
+                  (message) => {
+                    setLocationMessage(message)
+                  },
+                )
+              }}
+              className="mt-3 text-sm font-medium text-primary hover:underline"
+            >
+              Pokušaj ponovo sa trenutnom lokacijom
+            </button>
           </div>
 
           <button

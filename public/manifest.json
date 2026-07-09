@@ -1,7 +1,7 @@
 {
-  "name": "GDeRupa - Infrastrukturna Prijava za Srbiju",
-  "short_name": "GDeRupa",
-  "description": "Aplikacija za prijavu problema na putevima i infrastrukturi u Srbiji",
+  "name": "EvoRupa - Prijava rupa i infrastrukturnih problema",
+  "short_name": "EvoRupa",
+  "description": "EvoRupa je aplikacija za prijavu rupa, oštećenja puta i infrastrukturnih problema u Srbiji i Evropi",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

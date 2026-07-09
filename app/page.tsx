@@ -3,29 +3,12 @@ import Link from 'next/link'
 export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary to-secondary text-white">
-      <nav className="bg-secondary bg-opacity-50 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold">GDeRupa</h1>
-          <div className="space-x-4">
-            <Link href="/map" className="hover:text-red-300 transition">
-              Mapa
-            </Link>
-            <Link href="/report" className="hover:text-red-300 transition">
-              Prijavi problem
-            </Link>
-            <Link href="/admin" className="hover:text-red-300 transition">
-              Admin
-            </Link>
-          </div>
-        </div>
-      </nav>
-
       <section className="max-w-6xl mx-auto px-4 py-20 text-center">
         <h2 className="text-5xl font-bold mb-4">
           Unapredi infrastrukturu Srbije
         </h2>
         <p className="text-xl text-gray-200 mb-8">
-          Prijavi probleme na putevima i infrastrukturi direktno lokalnoj upravi
+          EvoRupa pomaže da prijaviš rupe i druge probleme na putevima i infrastrukturi direktno lokalnoj upravi.
         </p>
         <div className="space-x-4">
           <Link href="/map" className="btn-primary inline-block">

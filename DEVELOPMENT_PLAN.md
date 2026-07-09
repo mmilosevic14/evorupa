@@ -1,4 +1,4 @@
-# GDeRupa - Plan razvoja
+# EvoRupa - Plan razvoja
 
 ## Faza 1: MVP (Minimum Viable Product) - 4 nedelje
 

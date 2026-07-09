@@ -3,7 +3,7 @@
 After making changes locally, push them to GitHub with:
 
 ```bash
-cd gderupa
+cd evorupa
 
 # Add all changes
 git add .
@@ -23,7 +23,7 @@ git commit -m "Add Supabase integration with auth pages
 git push origin master
 ```
 
-**Your repository:** https://github.com/mmilosevic14/gderupa.git
+**Your repository:** https://github.com/mmilosevic14/evorupa.git
 
 **Default branch:** master
 
@@ -34,7 +34,7 @@ git push origin master
 If this is your first push to GitHub:
 
 ```bash
-git remote add origin https://github.com/mmilosevic14/gderupa.git
+git remote add origin https://github.com/mmilosevic14/evorupa.git
 git branch -M master
 git push -u origin master
 ```

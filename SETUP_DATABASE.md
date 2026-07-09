@@ -1,4 +1,4 @@
-# GDeRupa - Supabase Setup Vodič
+# EvoRupa - Supabase Setup Vodič
 
 ## 1. Kreiraj Supabase Projekat
 

@@ -1,4 +1,4 @@
-# GDeRupa - Početni Setup Vodič
+# EvoRupa - Početni Setup Vodič
 
 ## 🎯 Šta treba da uradiš?
 
@@ -9,7 +9,7 @@ Evo korak-po-korak instrukcija za pokretanje projekta:
 1. Idi na https://supabase.com
 2. Klikni "Sign up with GitHub" ili kreiraj nalog
 3. Kreiraj nov projekat:
-   - Naziv: `gderupa` (ili bilo koji)
+   - Naziv: `evorupa` (ili bilo koji)
    - Region: EU - Frankfurt (preporuka za Srbiju)
    - Database password: Zapamti ga!
 4. Čekaj 2-3 minuta da se kreira
@@ -30,7 +30,7 @@ Evo korak-po-korak instrukcija za pokretanje projekta:
 
 ## Korak 4: Kreiraj `.env.local` fajl
 
-1. U direktorijumu `gderupa/`, kreiraj fajl `.env.local`
+1. U direktorijumu `evorupa/`, kreiraj fajl `.env.local`
 2. Kopira ovo (zameni sa tvojim vrednostima):
 
 ```env
@@ -45,7 +45,7 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxxxxxxxxxxxxxxxxxxx
 ## Korak 5: Instaliraj NPM zavisnosti
 
 ```bash
-cd gderupa
+cd evorupa
 npm install
 ```
 
@@ -141,7 +141,7 @@ A: Mapbox ključ je opcionan. Možeš koristiti Leaflet sa OpenStreetMap (bespla
 ## 📊 Project struktura
 
 ```
-gderupa/
+evorupa/
 ├── app/                    # Next.js 14 app directory
 │   ├── layout.tsx         # Glavni layout
 │   ├── page.tsx           # Landing page

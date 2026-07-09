@@ -1,4 +1,4 @@
-# GDeRupa - Srpska Infrastrukturna Platforma
+# EvoRupa - Srpska Infrastrukturna Platforma
 
 Aplikacija za prijavu problema na putevima i infrastrukturi u Srbiji. Građani mogu fotografisati i mapirati probleme, a lokalne vlasti i zastupnici mogu da ih obrađuju.
 
@@ -34,8 +34,8 @@ v0.1.0 - Alpha
 
 ### 1. Kloniranje repozitorijuma
 ```bash
-git clone https://github.com/yourusername/gderupa.git
-cd gderupa
+git clone https://github.com/yourusername/evorupa.git
+cd evorupa
 ```
 
 ### 2. Instalacija zavisnosti
@@ -68,7 +68,7 @@ Otvori http://localhost:3000
 ## 📁 Struktura projekta
 
 ```
-gderupa/
+evorupa/
 ├── app/                    # Next.js app directory
 │   ├── layout.tsx         # Root layout sa PWA konfiguracijom
 │   ├── page.tsx           # Početna strana
@@ -140,8 +140,8 @@ vercel
 
 ### Docker
 ```bash
-docker build -t gderupa .
-docker run -p 3000:3000 gderupa
+docker build -t evorupa .
+docker run -p 3000:3000 evorupa
 ```
 
 ## 📚 Dokumentacija

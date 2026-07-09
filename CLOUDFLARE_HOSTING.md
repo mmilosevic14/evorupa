@@ -1,4 +1,4 @@
-# GDeRupa - Cloudflare Pages and Workers Hosting
+# EvoRupa - Cloudflare Pages and Workers Hosting
 
 This guide explains how to build and deploy the project to Cloudflare Pages with Workers runtime support.
 

@@ -1,4 +1,4 @@
-# GDeRupa - Zahtevi i Requirements
+# EvoRupa - Zahtevi i Requirements
 
 ## 1. Funkcionalnih zahteva
 

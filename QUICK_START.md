@@ -1,8 +1,8 @@
-# GDeRupa - Quick Start Guide
+# EvoRupa - Quick Start Guide
 
-## 📋 What is GDeRupa?
+## 📋 What is EvoRupa?
 
-GDeRupa is a citizen-driven infrastructure problem reporting app for Serbia. Users can:
+EvoRupa is a citizen-driven infrastructure problem reporting app for Serbia. Users can:
 - 🗺️ View problems on an interactive map
 - 📝 Report infrastructure issues (potholes, damaged roads, broken signs, etc.)
 - 📷 Upload photos of problems
@@ -160,7 +160,7 @@ See [BUILD_AND_DEPLOY.md](./BUILD_AND_DEPLOY.md) for detailed instructions:
 ## 📁 Project Structure
 
 ```
-gderupa/
+evorupa/
 ├── app/                      # Next.js app directory
 │   ├── layout.tsx           # Root layout
 │   ├── page.tsx             # Landing page

@@ -7,23 +7,23 @@
 ```bash
 # Initialize if needed (you have .git already)
 # Go to https://github.com/new
-# Create a new repository (name: gderupa)
+# Create a new repository (name: evorupa)
 # Copy the repository URL
 ```
 
 ### Step 2: Add GitHub Remote & Push
 
 ```bash
-git remote add origin https://github.com/YOUR_USERNAME/gderupa.git
+git remote add origin https://github.com/YOUR_USERNAME/evorupa.git
 git branch -M main
 git add .
-git commit -m "Deploy GDeRupa to Cloudflare Pages"
+git commit -m "Deploy EvoRupa to Cloudflare Pages"
 git push -u origin main
 ```
 
 ### Step 3: Set Up GitHub Secrets
 
-1. Go to: https://github.com/YOUR_USERNAME/gderupa/settings/secrets/actions
+1. Go to: https://github.com/YOUR_USERNAME/evorupa/settings/secrets/actions
 2. Create two new secrets:
    - Name: `CLOUDFLARE_ACCOUNT_ID` → Value: (from Cloudflare dashboard)
    - Name: `CLOUDFLARE_API_TOKEN` → Value: (from Cloudflare API tokens)
@@ -54,7 +54,7 @@ Just push to GitHub - CI/CD handles everything:
 git push origin main
 ```
 
-Your app will be live at: `https://gderupa.pages.dev` in ~2-3 minutes
+Your app will be live at: `https://evorupa.pages.dev` in ~2-3 minutes
 
 ---
 

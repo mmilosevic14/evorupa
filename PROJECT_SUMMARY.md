@@ -1,4 +1,4 @@
-# 🎉 GDeRupa - Projekat Inicijalizovan!
+# 🎉 EvoRupa - Projekat Inicijalizovan!
 
 ## ✅ Šta je već urađeno
 
@@ -52,7 +52,7 @@ Vidi `GETTING_STARTED.md` za detaljne instrukcije.
 
 ### Korak 2: Lokalni Setup (10 minuta)
 ```bash
-cd gderupa
+cd evorupa
 
 # Kreiraj .env.local sa tvojim Supabase ključevima
 echo 'NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co' > .env.local
@@ -119,7 +119,7 @@ npm run lint         # ESLint check
 npm run type-check   # TypeScript check
 
 # Docker
-docker build -t gderupa .        # Build Docker image
+docker build -t evorupa .        # Build Docker image
 docker-compose up                 # Pokreni Docker container
 ```
 
@@ -128,7 +128,7 @@ docker-compose up                 # Pokreni Docker container
 ## 🗺️ Mapa fajlova
 
 ```
-gderupa/
+evorupa/
 ├── 📄 README.md                  ← Čitaj prvo!
 ├── 📄 GETTING_STARTED.md         ← Setup instrukcije
 ├── 📄 DEVELOPMENT_PLAN.md        ← 14-nedelja plan
@@ -230,7 +230,7 @@ Nedelja 4  ⚙️  Admin Panel + Final Testing
 
 ## 🎉 Čestitke!
 
-Uspešno si inicijalizovao GDeRupa projekat!
+Uspešno si inicijalizovao EvoRupa projekat!
 
 Sada su ti dostupni:
 - ✅ Ceo kod sa best practices
@@ -249,7 +249,7 @@ Sada su ti dostupni:
 
 ```
 ╔═══════════════════════════════════════╗
-║  GDeRupa - Infrastrukturna Prijava    ║
+║  EvoRupa - Infrastrukturna Prijava    ║
 ║  Srbia - Put ka boljoj infrastrukturi ║
 ║═══════════════════════════════════════╝
 ```

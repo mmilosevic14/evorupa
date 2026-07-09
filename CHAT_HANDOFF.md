@@ -1,4 +1,4 @@
-# Chat Handoff - GDeRupa
+# Chat Handoff - EvoRupa
 
 Use this file when opening a new chat with this folder.
 

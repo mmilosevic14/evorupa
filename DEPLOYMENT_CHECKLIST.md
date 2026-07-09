@@ -1,4 +1,4 @@
-# GDeRupa - Deployment Checklist
+# EvoRupa - Deployment Checklist
 
 Use this checklist to ensure everything is properly configured before deploying to Cloudflare Pages.
 
@@ -18,7 +18,7 @@ Use this checklist to ensure everything is properly configured before deploying 
 **Auth Redirect URLs to Add:**
 ```
 http://localhost:3000         # Development
-https://gderupa.pages.dev    # Production (update with your domain)
+https://evorupa.pages.dev    # Production (update with your domain)
 https://*.pages.dev          # Cloudflare preview URLs
 ```
 
@@ -144,7 +144,7 @@ Check that build completes without errors.
 
 ```bash
 git add .
-git commit -m "Deploy GDeRupa to Cloudflare Pages"
+git commit -m "Deploy EvoRupa to Cloudflare Pages"
 git push origin main
 ```
 

@@ -1,4 +1,4 @@
-# GDeRupa - Deploy Now (No Waiting!)
+# EvoRupa - Deploy Now (No Waiting!)
 
 Your app is ready to deploy. Skip the local npm install - let's use the fast cloud path.
 
@@ -9,15 +9,15 @@ Your app is ready to deploy. Skip the local npm install - let's use the fast clo
 ### Step 1: Push to GitHub (Run these commands)
 
 ```powershell
-cd c:\Users\mmilosev\gderupa
+cd c:\Users\mmilosev\evorupa
 
 # First time setup - add GitHub remote
-git remote add origin https://github.com/YOUR_USERNAME/gderupa.git
+git remote add origin https://github.com/YOUR_USERNAME/evorupa.git
 git branch -M main
 
 # Commit everything
 git add .
-git commit -m "Deploy GDeRupa - map and reporting app ready"
+git commit -m "Deploy EvoRupa - map and reporting app ready"
 
 # Push to GitHub (will trigger auto-deploy)
 git push -u origin main
@@ -29,7 +29,7 @@ git push -u origin main
 
 ### Step 2: GitHub Secrets (Do this in your browser)
 
-1. Go to: `https://github.com/YOUR_USERNAME/gderupa/settings/secrets/actions`
+1. Go to: `https://github.com/YOUR_USERNAME/evorupa/settings/secrets/actions`
 
 2. Add **New repository secret**:
    - Name: `CLOUDFLARE_API_TOKEN`
@@ -47,7 +47,7 @@ git push -u origin main
 2. Click **Pages** (left sidebar)
 3. Click **Create a project**
 4. Click **Connect to Git**
-5. Select your `gderupa` repository
+5. Select your `evorupa` repository
 6. **Build configuration:**
    - Framework: Next.js
    - Build command: `npm run build:cf`
@@ -78,7 +78,7 @@ git push -u origin main
 
 Once deployed, visit:
 ```
-https://gderupa.pages.dev
+https://evorupa.pages.dev
 ```
 
 You can test:
@@ -113,7 +113,7 @@ If you don't have a GitHub account:
 1. Go to https://github.com/signup
 2. Create account (free)
 3. Create new repository: https://github.com/new
-4. Name: `gderupa`
+4. Name: `evorupa`
 5. Public or Private
 6. Click Create Repository
 7. Copy the URL (shown on the page)
@@ -143,7 +143,7 @@ git status
 git remote -v
 
 # Set remote (replace with your URL)
-git remote set-url origin https://github.com/YOUR_USERNAME/gderupa.git
+git remote set-url origin https://github.com/YOUR_USERNAME/evorupa.git
 
 # Check what will be pushed
 git log origin/main..main
@@ -158,7 +158,7 @@ git push -u origin main -v
 
 Your app is live! You can:
 
-1. **Share the link:** `https://gderupa.pages.dev`
+1. **Share the link:** `https://evorupa.pages.dev`
 2. **Test on mobile:** Works on all devices
 3. **Check Cloudflare dashboard:** See deployment status
 4. **View GitHub Actions:** See build logs

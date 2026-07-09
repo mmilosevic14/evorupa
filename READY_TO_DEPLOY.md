@@ -1,4 +1,4 @@
-# 🚀 GDeRupa - Ready to Launch!
+# 🚀 EvoRupa - Ready to Launch!
 
 Your infrastructure problem reporting app has been **fully developed and configured** for Cloudflare Pages deployment.
 
@@ -75,7 +75,7 @@ In Supabase Dashboard → Settings → Auth → Authorized URLs:
 
 ```
 http://localhost:3000
-https://gderupa.pages.dev
+https://evorupa.pages.dev
 https://*.pages.dev
 ```
 
@@ -210,7 +210,7 @@ npm run dev
 
 ## 📈 After Deployment
 
-Your app will be live at: `https://gderupa.pages.dev` (or your custom domain)
+Your app will be live at: `https://evorupa.pages.dev` (or your custom domain)
 
 **Next steps:**
 1. Test with real users

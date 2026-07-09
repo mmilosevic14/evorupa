@@ -19,8 +19,13 @@ export type Database = {
           longitude: number
           photo_url: string | null
           status: 'pending' | 'in_progress' | 'resolved' | 'rejected'
+          priority: string | null
+          tags: string[] | null
+          upvotes: number | null
+          views: number | null
           created_at: string
           updated_at: string
+          resolved_at: string | null
         }
         Insert: Omit<Database['public']['Tables']['reports']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['reports']['Insert']>
