@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic'
 import { createClient } from '@/utils/supabase/client'
 import { getReportPhotoUrl } from '@/lib/reportMedia'
 import type { Report } from '@/lib/supabase'
-import { getReportPlaceLabel, groupReportsByPlace, isOpenReport, parseReportLocation } from '@/lib/reportLocation'
+import { getReportPlaceLabel, groupReportsByDistrict, groupReportsByPlace, isOpenReport, parseReportLocation } from '@/lib/reportLocation'
 
 const MapComponent = dynamic(() => import('@/components/MapComponent'), {
   ssr: false,
@@ -84,6 +84,7 @@ function MetadataItem({ type, label }: { type: 'category' | 'status' | 'location
 export default function MapPageClient() {
   const [reports, setReports] = useState<Report[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedDistrictKey, setSelectedDistrictKey] = useState('all')
   const [selectedPlaceKey, setSelectedPlaceKey] = useState('all')
 
   useEffect(() => {
@@ -134,14 +135,25 @@ export default function MapPageClient() {
     }
   }, [])
 
-  const placeGroups = useMemo(() => groupReportsByPlace(reports), [reports])
-  const selectedReports = useMemo(() => {
-    if (selectedPlaceKey === 'all') {
+  const districtGroups = useMemo(() => groupReportsByDistrict(reports), [reports])
+  const selectedDistrict = selectedDistrictKey === 'all'
+    ? null
+    : districtGroups.find((group) => group.key === selectedDistrictKey) ?? null
+  const districtFilteredReports = useMemo(() => {
+    if (!selectedDistrict) {
       return reports
     }
 
+    return selectedDistrict.reports
+  }, [reports, selectedDistrict])
+  const placeGroups = useMemo(() => groupReportsByPlace(districtFilteredReports), [districtFilteredReports])
+  const selectedReports = useMemo(() => {
+    if (selectedPlaceKey === 'all') {
+      return districtFilteredReports
+    }
+
     return placeGroups.find((group) => group.key === selectedPlaceKey)?.reports ?? []
-  }, [placeGroups, reports, selectedPlaceKey])
+  }, [districtFilteredReports, placeGroups, selectedPlaceKey])
   const openReports = useMemo(
     () => selectedReports.filter((report) => isOpenReport(report)),
     [selectedReports],
@@ -149,6 +161,10 @@ export default function MapPageClient() {
   const selectedPlace = selectedPlaceKey === 'all'
     ? null
     : placeGroups.find((group) => group.key === selectedPlaceKey) ?? null
+
+  useEffect(() => {
+    setSelectedPlaceKey('all')
+  }, [selectedDistrictKey])
 
   return (
     <main className="min-h-screen bg-gray-100 py-8">
@@ -182,6 +198,21 @@ export default function MapPageClient() {
             <div className="bg-white rounded-lg shadow-md p-4 mb-6 no-print">
               <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                 <div className="flex-1">
+                  <label className="block text-sm font-medium mb-2">Filtriraj po okrugu</label>
+                  <select
+                    value={selectedDistrictKey}
+                    onChange={(event) => setSelectedDistrictKey(event.target.value)}
+                    className="w-full md:max-w-md"
+                  >
+                    <option value="all">Svi okruzi</option>
+                    {districtGroups.map((group) => (
+                      <option key={group.key} value={group.key}>
+                        {group.district} ({group.reportCount})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex-1">
                   <label className="block text-sm font-medium mb-2">Filtriraj po mestu / naselju</label>
                   <select
                     value={selectedPlaceKey}
@@ -206,8 +237,9 @@ export default function MapPageClient() {
               </div>
             </div>
 
-            <MapComponent reports={selectedReports} />
+            <MapComponent reports={selectedReports} selectedDistrict={selectedDistrict?.district ?? null} />
 
+            {!selectedPlace && (
             <div className="mt-8 bg-white rounded-lg shadow-md p-6 no-print">
               <h2 className="text-2xl font-bold mb-4">Pregled po mestu</h2>
 
@@ -246,6 +278,7 @@ export default function MapPageClient() {
                 </div>
               )}
             </div>
+            )}
 
             <div className="mt-8 bg-white rounded-lg shadow-md p-6 print-area print-card">
               <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between print-header">
@@ -254,6 +287,8 @@ export default function MapPageClient() {
                   <p className="text-gray-600 mt-1 print-subtitle">
                     {selectedPlace
                       ? `Mesto: ${selectedPlace.label}${selectedPlace.municipality ? `, ${selectedPlace.municipality}` : ''}`
+                      : selectedDistrict
+                        ? `Okrug: ${selectedDistrict.district}`
                       : 'Prikaz svih mesta'}
                   </p>
                 </div>
@@ -327,6 +362,7 @@ export default function MapPageClient() {
                           src={getReportPhotoUrl(report.photo_url)}
                           alt={report.title}
                           fill
+                          unoptimized
                           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                           className="object-cover"
                         />

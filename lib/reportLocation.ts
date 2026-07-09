@@ -21,6 +21,15 @@ export interface PlaceGroup {
   reports: Report[]
 }
 
+export interface DistrictGroup {
+  key: string
+  district: string
+  region: string
+  reportCount: number
+  openCount: number
+  reports: Report[]
+}
+
 const LOCATION_TAG_PREFIXES = {
   placeName: 'place:',
   placeType: 'placeType:',
@@ -114,6 +123,36 @@ export function groupReportsByPlace(reports: Report[]) {
       (current.latitude * (current.reportCount - 1) + report.latitude) / current.reportCount
     current.longitude =
       (current.longitude * (current.reportCount - 1) + report.longitude) / current.reportCount
+    current.reports.push(report)
+  })
+
+  return Array.from(groups.values()).sort((left, right) => right.reportCount - left.reportCount)
+}
+
+export function groupReportsByDistrict(reports: Report[]) {
+  const groups = new Map<string, DistrictGroup>()
+
+  reports.forEach((report) => {
+    const location = parseReportLocation(report.tags)
+    const district = location.district || 'Nepoznati okrug'
+    const region = location.region || 'Srbija'
+    const key = `${district.toLowerCase()}|${region.toLowerCase()}`
+    const current = groups.get(key)
+
+    if (!current) {
+      groups.set(key, {
+        key,
+        district,
+        region,
+        reportCount: 1,
+        openCount: isOpenReport(report) ? 1 : 0,
+        reports: [report],
+      })
+      return
+    }
+
+    current.reportCount += 1
+    current.openCount += isOpenReport(report) ? 1 : 0
     current.reports.push(report)
   })
 

@@ -1,5 +1,7 @@
 'use client'
 
+import ModerationPlaceholder from '@/components/admin/ModerationPlaceholder'
+
 export default function AdminPageClient() {
   return (
     <div className="min-h-screen bg-gray-100">
@@ -43,6 +45,8 @@ export default function AdminPageClient() {
               </table>
             </div>
           </div>
+
+          <ModerationPlaceholder />
         </div>
       </div>
     </div>

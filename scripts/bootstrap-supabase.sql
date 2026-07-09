@@ -11,12 +11,14 @@ CREATE TABLE IF NOT EXISTS public.users (
   municipality VARCHAR(100),
   bio TEXT,
   is_verified BOOLEAN DEFAULT FALSE,
+  is_admin BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS users_email_idx ON public.users(email);
 CREATE INDEX IF NOT EXISTS users_role_idx ON public.users(role);
+CREATE INDEX IF NOT EXISTS users_is_admin_idx ON public.users(is_admin);
 
 CREATE TABLE IF NOT EXISTS public.reports (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

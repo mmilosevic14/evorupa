@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { syncUserProfile } from '@/utils/supabase/profile'
 import { buildLocationTags, type ReportLocationDetails } from '@/lib/reportLocation'
+import { SERBIA_DISTRICT_BOUNDARIES } from '@/lib/serbiaDistricts'
 
 const DEFAULT_REPORT_LOCATION = {
   latitude: 44.0165,
@@ -17,6 +18,10 @@ type LocationSource = 'default' | 'browser' | 'photo'
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024
 const MAX_IMAGE_DIMENSION = 1600
 const WEBP_QUALITY = 0.82
+const DISTRICT_OPTIONS = Array.from(
+  new Set(SERBIA_DISTRICT_BOUNDARIES.map((feature) => feature.district)),
+).sort((left, right) => left.localeCompare(right, 'sr'))
+const REGION_OPTIONS = ['Srbija']
 
 function requestBrowserLocation(
   onSuccess: (coords: { latitude: number; longitude: number }) => void,
@@ -359,6 +364,12 @@ export default function ReportPageClient() {
     'Pokušaćemo da preuzmemo vašu trenutnu lokaciju. Ako ne uspe, koristi se podrazumevana lokacija u Srbiji.',
   )
   const router = useRouter()
+  const availableRegionOptions = Array.from(
+    new Set([...REGION_OPTIONS, locationDetails.region].filter(Boolean)),
+  )
+  const availableDistrictOptions = Array.from(
+    new Set([...DISTRICT_OPTIONS, locationDetails.district].filter(Boolean)),
+  ).sort((left, right) => left.localeCompare(right, 'sr'))
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -742,27 +753,36 @@ export default function ReportPageClient() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Okrug</label>
-                <input
-                  type="text"
+                <select
                   value={locationDetails.district}
                   onChange={(e) =>
                     setLocationDetails((prev) => ({ ...prev, district: e.target.value }))
                   }
-                  placeholder="npr. Raški upravni okrug"
                   className="w-full"
-                />
+                >
+                  <option value="">Izaberite okrug</option>
+                  {availableDistrictOptions.map((district) => (
+                    <option key={district} value={district}>
+                      {district}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Region</label>
-                <input
-                  type="text"
+                <select
                   value={locationDetails.region}
                   onChange={(e) =>
                     setLocationDetails((prev) => ({ ...prev, region: e.target.value }))
                   }
-                  placeholder="npr. Centralna Srbija"
                   className="w-full"
-                />
+                >
+                  {availableRegionOptions.map((region) => (
+                    <option key={region} value={region}>
+                      {region}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
             {locationDetails.placeType && locationDetails.placeType !== 'unknown' && (

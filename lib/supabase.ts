@@ -51,6 +51,7 @@ export type Database = {
           id: string
           email: string
           role: 'citizen' | 'deputy' | 'admin'
+          is_admin: boolean
           created_at: string
           updated_at: string
         }

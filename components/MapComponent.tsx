@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react'
 import { getReportPhotoUrl } from '@/lib/reportMedia'
 import type { Report } from '@/lib/supabase'
 import { groupReportsByPlace } from '@/lib/reportLocation'
+import { SERBIA_DISTRICT_BOUNDARIES } from '@/lib/serbiaDistricts'
 
 const OSM_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
 const OSM_ATTRIBUTION =
@@ -22,10 +23,11 @@ if (typeof window !== 'undefined') {
   })
 }
 
-export default function MapComponent({ reports = [] }: { reports?: Report[] }) {
+export default function MapComponent({ reports = [], selectedDistrict = null }: { reports?: Report[]; selectedDistrict?: string | null }) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<L.Map | null>(null)
   const markersLayerRef = useRef<L.LayerGroup | null>(null)
+  const districtLayerRef = useRef<L.LayerGroup | null>(null)
 
   useEffect(() => {
     const container = containerRef.current
@@ -50,11 +52,14 @@ export default function MapComponent({ reports = [] }: { reports?: Report[] }) {
     }).addTo(map)
 
     markersLayerRef.current = L.layerGroup().addTo(map)
+    districtLayerRef.current = L.layerGroup().addTo(map)
     mapRef.current = map
 
     return () => {
       markersLayerRef.current?.clearLayers()
       markersLayerRef.current = null
+      districtLayerRef.current?.clearLayers()
+      districtLayerRef.current = null
       map.remove()
       mapRef.current = null
     }
@@ -63,13 +68,35 @@ export default function MapComponent({ reports = [] }: { reports?: Report[] }) {
   useEffect(() => {
     const map = mapRef.current
     const markersLayer = markersLayerRef.current
+    const districtLayer = districtLayerRef.current
 
-    if (!map || !markersLayer) {
+    if (!map || !markersLayer || !districtLayer) {
       return
     }
 
     const placeGroups = groupReportsByPlace(reports)
     const bounds: [number, number][] = []
+    const selectedDistrictBoundary = selectedDistrict
+      ? SERBIA_DISTRICT_BOUNDARIES.find((feature) => feature.district === selectedDistrict) ?? null
+      : null
+
+    districtLayer.clearLayers()
+
+    SERBIA_DISTRICT_BOUNDARIES.forEach((feature) => {
+      const isSelected = feature.district === selectedDistrict
+      const latLngPolygons = feature.polygons.map((polygon) =>
+        polygon.map((ring) => ring.map(([longitude, latitude]) => [latitude, longitude] as [number, number])),
+      )
+
+      L.polygon(latLngPolygons, {
+        color: isSelected ? '#0f172a' : '#64748b',
+        weight: isSelected ? 2.5 : 1,
+        opacity: isSelected ? 0.8 : 0.35,
+        fillColor: isSelected ? '#2563eb' : '#94a3b8',
+        fillOpacity: isSelected ? 0.08 : 0.02,
+        interactive: false,
+      }).addTo(districtLayer)
+    })
 
     const renderMarkers = () => {
       markersLayer.clearLayers()
@@ -165,7 +192,17 @@ export default function MapComponent({ reports = [] }: { reports?: Report[] }) {
       bounds.push([group.latitude, group.longitude])
     })
 
-    if (bounds.length === 1) {
+    if (selectedDistrictBoundary && placeGroups.length > 1) {
+      map.fitBounds(
+        [
+          [selectedDistrictBoundary.bounds.south, selectedDistrictBoundary.bounds.west],
+          [selectedDistrictBoundary.bounds.north, selectedDistrictBoundary.bounds.east],
+        ],
+        {
+          padding: [24, 24],
+        },
+      )
+    } else if (bounds.length === 1) {
       map.setView(bounds[0], 11)
     } else if (bounds.length > 1) {
       map.fitBounds(bounds, {
@@ -184,7 +221,7 @@ export default function MapComponent({ reports = [] }: { reports?: Report[] }) {
     return () => {
       map.off('zoomend', handleZoomChange)
     }
-  }, [reports])
+  }, [reports, selectedDistrict])
 
   return (
     <div className="w-full h-96 rounded-lg overflow-hidden shadow-lg print-map">

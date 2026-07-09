@@ -19,6 +19,17 @@ interface SerbiaDistrictGeoJson {
   features: SerbiaDistrictFeature[]
 }
 
+export interface SerbiaDistrictBoundaryFeature {
+  district: string
+  polygons: GeoJsonMultiPolygonCoordinates
+  bounds: {
+    south: number
+    west: number
+    north: number
+    east: number
+  }
+}
+
 const DISTRICT_NAME_ALIASES: Record<string, string> = {
   severnobacki: 'Severnobački upravni okrug',
   zapadnobacki: 'Zapadnobački upravni okrug',
@@ -102,26 +113,57 @@ function pointIsInsidePolygon(latitude: number, longitude: number, polygon: GeoJ
   return true
 }
 
+function toMultiPolygonCoordinates(feature: SerbiaDistrictFeature): GeoJsonMultiPolygonCoordinates {
+  return feature.geometry.type === 'Polygon'
+    ? [feature.geometry.coordinates as GeoJsonPolygonCoordinates]
+    : (feature.geometry.coordinates as GeoJsonMultiPolygonCoordinates)
+}
+
+function getBounds(polygons: GeoJsonMultiPolygonCoordinates) {
+  let south = Number.POSITIVE_INFINITY
+  let west = Number.POSITIVE_INFINITY
+  let north = Number.NEGATIVE_INFINITY
+  let east = Number.NEGATIVE_INFINITY
+
+  polygons.forEach((polygon) => {
+    polygon.forEach((ring) => {
+      ring.forEach(([longitude, latitude]) => {
+        south = Math.min(south, latitude)
+        west = Math.min(west, longitude)
+        north = Math.max(north, latitude)
+        east = Math.max(east, longitude)
+      })
+    })
+  })
+
+  return { south, west, north, east }
+}
+
 export interface SerbiaDistrictMatch {
   district: string
   region: string
 }
 
+export const SERBIA_DISTRICT_BOUNDARIES: SerbiaDistrictBoundaryFeature[] = districtGeoJson.features.map((feature) => {
+  const polygons = toMultiPolygonCoordinates(feature)
+
+  return {
+    district: normalizeDistrictName(feature.properties.name),
+    polygons,
+    bounds: getBounds(polygons),
+  }
+})
+
 export function findSerbiaDistrictByPoint(
   latitude: number,
   longitude: number,
 ): SerbiaDistrictMatch | null {
-  for (const feature of districtGeoJson.features) {
-    const isMatch =
-      feature.geometry.type === 'Polygon'
-        ? pointIsInsidePolygon(latitude, longitude, feature.geometry.coordinates as GeoJsonPolygonCoordinates)
-        : (feature.geometry.coordinates as GeoJsonMultiPolygonCoordinates).some((polygon) =>
-            pointIsInsidePolygon(latitude, longitude, polygon),
-          )
+  for (const feature of SERBIA_DISTRICT_BOUNDARIES) {
+    const isMatch = feature.polygons.some((polygon) => pointIsInsidePolygon(latitude, longitude, polygon))
 
     if (isMatch) {
       return {
-        district: normalizeDistrictName(feature.properties.name),
+        district: feature.district,
         region: 'Srbija',
       }
     }
