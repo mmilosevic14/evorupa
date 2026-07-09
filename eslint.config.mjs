@@ -13,6 +13,7 @@ const config = [
 	{
 		ignores: [
 			'.next/**',
+			'.next-prod/**',
 			'.vercel/**',
 			'out/**',
 			'build/**',
