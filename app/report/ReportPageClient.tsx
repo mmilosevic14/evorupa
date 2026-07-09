@@ -14,6 +14,10 @@ const DEFAULT_REPORT_LOCATION = {
 
 type LocationSource = 'default' | 'browser' | 'photo'
 
+const MAX_IMAGE_BYTES = 15 * 1024 * 1024
+const MAX_IMAGE_DIMENSION = 1600
+const WEBP_QUALITY = 0.82
+
 function requestBrowserLocation(
   onSuccess: (coords: { latitude: number; longitude: number }) => void,
   onError: (message: string) => void,
@@ -192,6 +196,15 @@ interface FormData {
   photo?: File | null
 }
 
+function isValidHttpUrl(value: string) {
+  try {
+    const parsed = new URL(value)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
 async function readBlobAsDataUrl(blob: Blob) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader()
@@ -208,28 +221,109 @@ async function readBlobAsDataUrl(blob: Blob) {
   })
 }
 
-async function processImageToWebp({ file, sourceUrl }: { file?: File; sourceUrl?: string }) {
-  const formData = new FormData()
+async function loadImageFromBlob(blob: Blob) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(blob)
+    const image = new window.Image()
 
-  if (file) {
-    formData.append('file', file)
-  }
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl)
+      resolve(image)
+    }
 
-  if (sourceUrl) {
-    formData.append('sourceUrl', sourceUrl)
-  }
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl)
+      reject(new Error('Nije moguće učitati sliku za obradu.'))
+    }
 
-  const response = await fetch('/api/process-report-image', {
-    method: 'POST',
-    body: formData,
+    image.src = objectUrl
   })
+}
 
-  if (!response.ok) {
-    const errorPayload = (await response.json().catch(() => null)) as { error?: string } | null
-    throw new Error(errorPayload?.error || 'Nije moguće obraditi sliku.')
+async function readSourceBlob({ file, sourceUrl }: { file?: File; sourceUrl?: string }) {
+  if (file) {
+    if (file.size > MAX_IMAGE_BYTES) {
+      throw new Error('Otpremljena slika je prevelika. Maksimalna veličina je 15MB.')
+    }
+
+    return file
   }
 
-  const webpBlob = await response.blob()
+  if (sourceUrl?.trim()) {
+    const trimmedUrl = sourceUrl.trim()
+
+    if (!isValidHttpUrl(trimmedUrl)) {
+      throw new Error('URL slike mora koristiti http ili https protokol.')
+    }
+
+    let response: Response
+
+    try {
+      response = await fetch(trimmedUrl, {
+        cache: 'no-store',
+      })
+    } catch {
+      throw new Error(
+        'Nije moguće preuzeti sliku sa URL adrese iz pregledača. Ako sajt blokira pristup, preuzmite sliku ručno i otpremite je kao fajl.',
+      )
+    }
+
+    if (!response.ok) {
+      throw new Error(`Nije moguće preuzeti sliku sa URL adrese. Status: ${response.status}`)
+    }
+
+    const contentLengthHeader = response.headers.get('content-length')
+
+    if (contentLengthHeader && Number(contentLengthHeader) > MAX_IMAGE_BYTES) {
+      throw new Error('Izvorna slika je prevelika. Maksimalna veličina je 15MB.')
+    }
+
+    const blob = await response.blob()
+
+    if (blob.size > MAX_IMAGE_BYTES) {
+      throw new Error('Izvorna slika je prevelika. Maksimalna veličina je 15MB.')
+    }
+
+    return blob
+  }
+
+  throw new Error('Pošaljite sliku kao fajl ili navedite izvorni URL slike.')
+}
+
+async function processImageToWebp({ file, sourceUrl }: { file?: File; sourceUrl?: string }) {
+  const sourceBlob = await readSourceBlob({ file, sourceUrl })
+  const image = await loadImageFromBlob(sourceBlob)
+  const dominantDimension = Math.max(image.naturalWidth, image.naturalHeight, 1)
+  const scale = Math.min(1, MAX_IMAGE_DIMENSION / dominantDimension)
+  const targetWidth = Math.max(1, Math.round(image.naturalWidth * scale))
+  const targetHeight = Math.max(1, Math.round(image.naturalHeight * scale))
+  const canvas = document.createElement('canvas')
+
+  canvas.width = targetWidth
+  canvas.height = targetHeight
+
+  const context = canvas.getContext('2d')
+
+  if (!context) {
+    throw new Error('Pregledač ne podržava obradu slike.')
+  }
+
+  context.drawImage(image, 0, 0, targetWidth, targetHeight)
+
+  const webpBlob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error('Nije moguće obraditi sliku i pretvoriti je u WebP.'))
+          return
+        }
+
+        resolve(blob)
+      },
+      'image/webp',
+      WEBP_QUALITY,
+    )
+  })
 
   return new File([webpBlob], `report-${Date.now()}.webp`, { type: 'image/webp' })
 }
@@ -594,6 +688,9 @@ export default function ReportPageClient() {
                   {imageProcessing ? 'Obrada...' : 'Preuzmi i pretvori u WebP'}
                 </button>
               </div>
+              <p className="mt-3 text-xs text-gray-500">
+                Ako sajt sa slike blokira direktno preuzimanje iz pregledača, preuzmite sliku ručno i otpremite je kao fajl.
+              </p>
               {photoPreview && (
                 <div className="relative mt-4 h-48 overflow-hidden rounded-lg">
                   <Image
