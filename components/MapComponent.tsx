@@ -1,7 +1,7 @@
 'use client'
 
 import L from 'leaflet'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { getReportPhotoUrl } from '@/lib/reportMedia'
 import type { Report } from '@/lib/supabase'
 import { groupReportsByPlace } from '@/lib/reportLocation'
@@ -9,9 +9,11 @@ import { SERBIA_DISTRICT_BOUNDARIES } from '@/lib/serbiaDistricts'
 
 const OSM_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
 const OSM_ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  '&copy; <a href="https://www.openstreetmap.org/copyright" aria-label="OpenStreetMap">OSM</a>'
 const DEFAULT_MAP_CENTER: [number, number] = [44.8176, 20.4554]
 const INDIVIDUAL_MARKER_ZOOM = 13
+const DEFAULT_MAP_HEIGHT_CLASS = 'h-96'
+const EXPANDED_MAP_HEIGHT_CLASS = 'h-[min(78vh,720px)]'
 
 // Fix Leaflet marker icons
 if (typeof window !== 'undefined') {
@@ -24,26 +26,40 @@ if (typeof window !== 'undefined') {
 }
 
 export default function MapComponent({ reports = [], selectedDistrict = null }: { reports?: Report[]; selectedDistrict?: string | null }) {
+  const [isPopupExpanded, setIsPopupExpanded] = useState(false)
+  const [isFullscreenActive, setIsFullscreenActive] = useState(false)
+  const shellRef = useRef<HTMLDivElement | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<L.Map | null>(null)
-  const markersLayerRef = useRef<L.LayerGroup | null>(null)
+  const markersLayerRef = useRef<L.FeatureGroup | null>(null)
   const districtLayerRef = useRef<L.LayerGroup | null>(null)
+  const fullscreenButtonRef = useRef<HTMLAnchorElement | null>(null)
+  const isFullscreenActiveRef = useRef(false)
+
+  const invalidateMapSize = (map: L.Map) => {
+    requestAnimationFrame(() => map.invalidateSize(false))
+    window.setTimeout(() => map.invalidateSize(false), 320)
+  }
 
   useEffect(() => {
     const container = containerRef.current
+    const shell = shellRef.current
 
-    if (!container || mapRef.current) {
+    if (!container || !shell || mapRef.current) {
       return
     }
 
     const map = L.map(container, {
       center: DEFAULT_MAP_CENTER,
       zoom: 7,
+      attributionControl: false,
       preferCanvas: true,
       fadeAnimation: false,
       zoomAnimation: false,
       markerZoomAnimation: false,
     })
+
+    L.control.attribution({ prefix: false }).addTo(map)
 
     L.tileLayer(OSM_TILE_URL, {
       attribution: OSM_ATTRIBUTION,
@@ -51,15 +67,84 @@ export default function MapComponent({ reports = [], selectedDistrict = null }: 
       keepBuffer: 2,
     }).addTo(map)
 
-    markersLayerRef.current = L.layerGroup().addTo(map)
+    const FullscreenControl = L.Control.extend({
+      onAdd() {
+        const controlContainer = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-compact-fullscreen')
+        const button = L.DomUtil.create('a', '', controlContainer) as HTMLAnchorElement
+        button.href = '#'
+        button.innerHTML = '&#x26F6;'
+        button.title = 'Prikaži mapu preko celog ekrana'
+        button.setAttribute('aria-label', button.title)
+        fullscreenButtonRef.current = button
+
+        L.DomEvent.disableClickPropagation(controlContainer)
+        L.DomEvent.disableScrollPropagation(controlContainer)
+        L.DomEvent.on(button, 'click', (event: Event) => {
+          L.DomEvent.stop(event)
+
+          if (document.fullscreenElement === shell) {
+            void document.exitFullscreen()
+            return
+          }
+
+          void shell.requestFullscreen()
+        })
+
+        return controlContainer
+      },
+    })
+
+    new FullscreenControl({ position: 'topleft' }).addTo(map)
+
+    markersLayerRef.current = L.featureGroup().addTo(map)
     districtLayerRef.current = L.layerGroup().addTo(map)
     mapRef.current = map
 
+    const syncFullscreenState = () => {
+      const active = document.fullscreenElement === shell
+      isFullscreenActiveRef.current = active
+      setIsFullscreenActive(active)
+
+      if (fullscreenButtonRef.current) {
+        fullscreenButtonRef.current.innerHTML = active ? '&#x2715;' : '&#x26F6;'
+        fullscreenButtonRef.current.title = active
+          ? 'Izađi iz prikaza preko celog ekrana'
+          : 'Prikaži mapu preko celog ekrana'
+        fullscreenButtonRef.current.setAttribute('aria-label', fullscreenButtonRef.current.title)
+      }
+
+      invalidateMapSize(map)
+    }
+
+    const handlePopupOpen = () => {
+      if (!isFullscreenActiveRef.current) {
+        setIsPopupExpanded(true)
+      }
+
+      invalidateMapSize(map)
+    }
+
+    const handlePopupClose = () => {
+      if (!isFullscreenActiveRef.current) {
+        setIsPopupExpanded(false)
+      }
+
+      invalidateMapSize(map)
+    }
+
+    document.addEventListener('fullscreenchange', syncFullscreenState)
+    map.on('popupopen', handlePopupOpen)
+    map.on('popupclose', handlePopupClose)
+
     return () => {
+      document.removeEventListener('fullscreenchange', syncFullscreenState)
+      map.off('popupopen', handlePopupOpen)
+      map.off('popupclose', handlePopupClose)
       markersLayerRef.current?.clearLayers()
       markersLayerRef.current = null
       districtLayerRef.current?.clearLayers()
       districtLayerRef.current = null
+      fullscreenButtonRef.current = null
       map.remove()
       mapRef.current = null
     }
@@ -75,7 +160,6 @@ export default function MapComponent({ reports = [], selectedDistrict = null }: 
     }
 
     const placeGroups = groupReportsByPlace(reports)
-    const bounds: [number, number][] = []
     const selectedDistrictBoundary = selectedDistrict
       ? SERBIA_DISTRICT_BOUNDARIES.find((feature) => feature.district === selectedDistrict) ?? null
       : null
@@ -188,11 +272,17 @@ export default function MapComponent({ reports = [], selectedDistrict = null }: 
       })
     }
 
-    placeGroups.forEach((group) => {
-      bounds.push([group.latitude, group.longitude])
-    })
+    renderMarkers()
 
-    if (selectedDistrictBoundary && placeGroups.length > 1) {
+    const markerBounds = markersLayer.getBounds()
+
+    if (markerBounds.isValid() && reports.length > 1) {
+      map.fitBounds(markerBounds, {
+        padding: [32, 32],
+      })
+    } else if (reports.length === 1) {
+      map.setView([reports[0].latitude, reports[0].longitude], 11)
+    } else if (selectedDistrictBoundary) {
       map.fitBounds(
         [
           [selectedDistrictBoundary.bounds.south, selectedDistrictBoundary.bounds.west],
@@ -202,15 +292,7 @@ export default function MapComponent({ reports = [], selectedDistrict = null }: 
           padding: [24, 24],
         },
       )
-    } else if (bounds.length === 1) {
-      map.setView(bounds[0], 11)
-    } else if (bounds.length > 1) {
-      map.fitBounds(bounds, {
-        padding: [32, 32],
-      })
     }
-
-    renderMarkers()
 
     const handleZoomChange = () => {
       renderMarkers()
@@ -223,8 +305,27 @@ export default function MapComponent({ reports = [], selectedDistrict = null }: 
     }
   }, [reports, selectedDistrict])
 
+  useEffect(() => {
+    const map = mapRef.current
+
+    if (!map) {
+      return
+    }
+
+    invalidateMapSize(map)
+  }, [isPopupExpanded, isFullscreenActive])
+
   return (
-    <div className="w-full h-96 rounded-lg overflow-hidden shadow-lg print-map">
+    <div
+      ref={shellRef}
+      className={`map-shell w-full overflow-hidden shadow-lg print-map ${
+        isFullscreenActive
+          ? 'h-screen rounded-none'
+          : isPopupExpanded
+            ? `${EXPANDED_MAP_HEIGHT_CLASS} rounded-lg`
+            : `${DEFAULT_MAP_HEIGHT_CLASS} rounded-lg`
+      }`}
+    >
       <div ref={containerRef} className="w-full h-full" />
     </div>
   )
