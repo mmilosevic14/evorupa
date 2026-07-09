@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { syncUserProfile } from '@/utils/supabase/profile'
-import { DEFAULT_REPORT_PHOTO_URL } from '@/lib/reportMedia'
 import { buildLocationTags, type ReportLocationDetails } from '@/lib/reportLocation'
 
 const DEFAULT_REPORT_LOCATION = {
@@ -193,6 +192,48 @@ interface FormData {
   photo?: File | null
 }
 
+async function readBlobAsDataUrl(blob: Blob) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      if (typeof reader.result === 'string') {
+        resolve(reader.result)
+        return
+      }
+
+      reject(new Error('Nije moguće prikazati obrađenu sliku.'))
+    }
+    reader.onerror = () => reject(reader.error ?? new Error('Greška pri čitanju slike.'))
+    reader.readAsDataURL(blob)
+  })
+}
+
+async function processImageToWebp({ file, sourceUrl }: { file?: File; sourceUrl?: string }) {
+  const formData = new FormData()
+
+  if (file) {
+    formData.append('file', file)
+  }
+
+  if (sourceUrl) {
+    formData.append('sourceUrl', sourceUrl)
+  }
+
+  const response = await fetch('/api/process-report-image', {
+    method: 'POST',
+    body: formData,
+  })
+
+  if (!response.ok) {
+    const errorPayload = (await response.json().catch(() => null)) as { error?: string } | null
+    throw new Error(errorPayload?.error || 'Nije moguće obraditi sliku.')
+  }
+
+  const webpBlob = await response.blob()
+
+  return new File([webpBlob], `report-${Date.now()}.webp`, { type: 'image/webp' })
+}
+
 const EMPTY_LOCATION_DETAILS: ReportLocationDetails = {
   placeName: '',
   placeType: 'unknown',
@@ -211,6 +252,8 @@ export default function ReportPageClient() {
     photo: null,
   })
   const [photoPreview, setPhotoPreview] = useState<string>('')
+  const [sourceImageUrl, setSourceImageUrl] = useState('')
+  const [imageProcessing, setImageProcessing] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
@@ -303,15 +346,24 @@ export default function ReportPageClient() {
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      setFormData((prev) => ({ ...prev, photo: file }))
-
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setPhotoPreview(reader.result as string)
-      }
-      reader.readAsDataURL(file)
+      setError('')
+      setImageProcessing(true)
+      setSourceImageUrl('')
 
       const photoCoordinates = await extractGpsCoordinates(file)
+
+      try {
+        const processedFile = await processImageToWebp({ file })
+        const preview = await readBlobAsDataUrl(processedFile)
+        setFormData((prev) => ({ ...prev, photo: processedFile }))
+        setPhotoPreview(preview)
+      } catch (imageError) {
+        setFormData((prev) => ({ ...prev, photo: null }))
+        setPhotoPreview('')
+        setError(imageError instanceof Error ? imageError.message : 'Greška pri obradi slike.')
+      } finally {
+        setImageProcessing(false)
+      }
 
       if (photoCoordinates && locationSource !== 'browser') {
         setFormData((prev) => ({
@@ -326,6 +378,29 @@ export default function ReportPageClient() {
           'Fotografija nema GPS podatke. Koristi se podrazumevana lokacija u Srbiji dok ne odobrite geolokaciju.',
         )
       }
+    }
+  }
+
+  const handleSourceImageProcess = async () => {
+    if (!sourceImageUrl.trim()) {
+      setError('Unesite URL slike pre obrade.')
+      return
+    }
+
+    setError('')
+    setImageProcessing(true)
+
+    try {
+      const processedFile = await processImageToWebp({ sourceUrl: sourceImageUrl.trim() })
+      const preview = await readBlobAsDataUrl(processedFile)
+      setFormData((prev) => ({ ...prev, photo: processedFile }))
+      setPhotoPreview(preview)
+    } catch (imageError) {
+      setFormData((prev) => ({ ...prev, photo: null }))
+      setPhotoPreview('')
+      setError(imageError instanceof Error ? imageError.message : 'Greška pri obradi slike sa URL adrese.')
+    } finally {
+      setImageProcessing(false)
     }
   }
 
@@ -344,18 +419,24 @@ export default function ReportPageClient() {
 
       await syncUserProfile(supabase, user)
 
-      let photoUrl = DEFAULT_REPORT_PHOTO_URL
+      let processedPhoto = formData.photo
 
-      if (formData.photo) {
-        const fileExt = formData.photo.name.split('.').pop()
-        const fileName = `${Date.now()}.${fileExt}`
+      if (!processedPhoto && sourceImageUrl.trim()) {
+        processedPhoto = await processImageToWebp({ sourceUrl: sourceImageUrl.trim() })
+      }
+
+      let photoUrl: string | null = null
+
+      if (processedPhoto) {
+        const fileName = `${Date.now()}.webp`
         const filePath = `report-photos/${user.id}/${fileName}`
 
         const { error: uploadError } = await supabase.storage
           .from('report-photos')
-          .upload(filePath, formData.photo, {
+          .upload(filePath, processedPhoto, {
             cacheControl: '3600',
             upsert: false,
+            contentType: 'image/webp',
           })
 
         if (uploadError) throw uploadError
@@ -480,12 +561,39 @@ export default function ReportPageClient() {
           <div className="mb-6">
             <label className="block text-sm font-medium mb-2">Fotografija problema</label>
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+              <p className="text-sm text-gray-600 mb-3">
+                Možete otpremiti sliku ili uneti izvorni URL. Slika se automatski pretvara u WebP pre čuvanja u bucket-u.
+              </p>
               <input
                 type="file"
                 accept="image/*"
                 onChange={handlePhotoChange}
                 className="w-full"
               />
+              <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-end">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium mb-2">Izvorni URL slike</label>
+                  <input
+                    type="url"
+                    value={sourceImageUrl}
+                    onChange={(e) => setSourceImageUrl(e.target.value)}
+                    placeholder="https://primer.rs/slika.jpg"
+                    className="w-full"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSourceImageProcess}
+                  disabled={imageProcessing || !sourceImageUrl.trim()}
+                  className={`px-4 py-2 rounded-lg font-medium text-white ${
+                    imageProcessing || !sourceImageUrl.trim()
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-secondary hover:bg-secondary-dark'
+                  }`}
+                >
+                  {imageProcessing ? 'Obrada...' : 'Preuzmi i pretvori u WebP'}
+                </button>
+              </div>
               {photoPreview && (
                 <div className="relative mt-4 h-48 overflow-hidden rounded-lg">
                   <Image
@@ -496,6 +604,11 @@ export default function ReportPageClient() {
                     className="object-cover"
                   />
                 </div>
+              )}
+              {formData.photo && (
+                <p className="mt-3 text-sm text-green-700">
+                  Slika je pripremljena za upload kao <strong>WebP</strong>.
+                </p>
               )}
             </div>
           </div>
@@ -590,12 +703,12 @@ export default function ReportPageClient() {
             type="submit"
             disabled={loading}
             className={`w-full px-4 py-3 rounded-lg font-medium text-white transition-colors ${
-              loading
+              loading || imageProcessing
                 ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-primary hover:bg-red-700'
+                : 'bg-primary hover:bg-primary-dark'
             }`}
           >
-            {loading ? 'Slanje...' : 'Pošalji izveštaj'}
+            {loading ? 'Slanje...' : imageProcessing ? 'Obrada slike...' : 'Pošalji izveštaj'}
           </button>
         </form>
       </div>

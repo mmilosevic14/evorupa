@@ -41,19 +41,19 @@ export default function RootLayout({
   return (
     <html lang="sr">
       <body className="antialiased">
-        <nav className="bg-blue-600 text-white shadow-lg">
+        <nav className="bg-secondary text-white shadow-lg">
           <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-            <Link href="/" className="text-2xl font-bold hover:text-blue-200">
+            <Link href="/" className="text-2xl font-bold hover:text-blue-100">
               EvoRupa
             </Link>
             <div className="space-x-4">
-              <Link href="/map" className="hover:text-blue-200 transition">
+              <Link href="/map" className="hover:text-blue-100 transition">
                 Mapa
               </Link>
-              <Link href="/report" className="hover:text-blue-200 transition">
+              <Link href="/report" className="hover:text-blue-100 transition">
                 Prijavi problem
               </Link>
-              <Link href="/admin" className="hover:text-blue-200 transition">
+              <Link href="/admin" className="hover:text-blue-100 transition">
                 Admin
               </Link>
             </div>

@@ -37,14 +37,32 @@ CREATE TABLE IF NOT EXISTS public.reports (
   resolved_at TIMESTAMPTZ
 );
 
+CREATE TABLE IF NOT EXISTS public.settlements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR(150) NOT NULL,
+  municipality VARCHAR(150) NOT NULL,
+  district VARCHAR(150),
+  region VARCHAR(150) NOT NULL DEFAULT 'Srbija',
+  place_type VARCHAR(50) NOT NULL,
+  latitude DECIMAL(10, 8) NOT NULL,
+  longitude DECIMAL(11, 8) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT settlements_unique_place UNIQUE (name, municipality, district)
+);
+
 CREATE INDEX IF NOT EXISTS reports_user_id_idx ON public.reports(user_id);
 CREATE INDEX IF NOT EXISTS reports_status_idx ON public.reports(status);
 CREATE INDEX IF NOT EXISTS reports_category_idx ON public.reports(category);
 CREATE INDEX IF NOT EXISTS reports_location_idx ON public.reports(latitude, longitude);
 CREATE INDEX IF NOT EXISTS reports_created_at_idx ON public.reports(created_at DESC);
+CREATE INDEX IF NOT EXISTS settlements_name_idx ON public.settlements(name);
+CREATE INDEX IF NOT EXISTS settlements_municipality_idx ON public.settlements(municipality);
+CREATE INDEX IF NOT EXISTS settlements_location_idx ON public.settlements(latitude, longitude);
 
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.settlements ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Users can view all profiles" ON public.users;
 CREATE POLICY "Users can view all profiles"
@@ -65,6 +83,11 @@ CREATE POLICY "Users can update own profile"
 DROP POLICY IF EXISTS "Anyone can view reports" ON public.reports;
 CREATE POLICY "Anyone can view reports"
   ON public.reports FOR SELECT
+  USING (true);
+
+DROP POLICY IF EXISTS "Anyone can view settlements" ON public.settlements;
+CREATE POLICY "Anyone can view settlements"
+  ON public.settlements FOR SELECT
   USING (true);
 
 DROP POLICY IF EXISTS "Users can create reports" ON public.reports;

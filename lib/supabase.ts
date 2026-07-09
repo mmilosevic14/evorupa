@@ -30,6 +30,22 @@ export type Database = {
         Insert: Omit<Database['public']['Tables']['reports']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['reports']['Insert']>
       }
+      settlements: {
+        Row: {
+          id: string
+          name: string
+          municipality: string
+          district: string | null
+          region: string
+          place_type: string
+          latitude: number
+          longitude: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['settlements']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['settlements']['Insert']>
+      }
       users: {
         Row: {
           id: string

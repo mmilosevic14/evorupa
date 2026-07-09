@@ -79,7 +79,7 @@ export default function LoginPageClient() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-primary text-white font-medium py-2 rounded-lg hover:bg-red-700 transition disabled:opacity-50"
+            className="w-full bg-primary text-white font-medium py-2 rounded-lg hover:bg-primary-dark transition disabled:opacity-50"
           >
             {loading ? 'Učitavanje...' : 'Uloguj se'}
           </button>

@@ -231,7 +231,7 @@ function createReport({ place, placeIndex, reportIndex, userId, location }) {
     category: pick(categories, placeIndex + reportIndex),
     latitude,
     longitude,
-    photo_url: '/default-report-photo.jpg',
+    photo_url: null,
     status,
     priority: status === 'pending' ? 'high' : 'medium',
     tags: buildLocationTags(location),

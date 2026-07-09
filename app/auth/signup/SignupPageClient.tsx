@@ -53,7 +53,7 @@ export default function SignupPageClient() {
           </p>
           <Link
             href="/auth/login"
-            className="bg-primary text-white font-medium py-2 px-4 rounded-lg hover:bg-red-700 transition"
+            className="bg-primary text-white font-medium py-2 px-4 rounded-lg hover:bg-primary-dark transition"
           >
             Nazad na login
           </Link>
@@ -122,7 +122,7 @@ export default function SignupPageClient() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-primary text-white font-medium py-2 rounded-lg hover:bg-red-700 transition disabled:opacity-50"
+            className="w-full bg-primary text-white font-medium py-2 rounded-lg hover:bg-primary-dark transition disabled:opacity-50"
           >
             {loading ? 'Učitavanje...' : 'Registruj se'}
           </button>
