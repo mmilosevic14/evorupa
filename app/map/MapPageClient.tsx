@@ -17,6 +17,70 @@ const MapComponent = dynamic(() => import('@/components/MapComponent'), {
   ),
 })
 
+const CATEGORY_LABELS: Record<string, string> = {
+  road_damage: 'Oštećenje puta',
+  traffic_sign: 'Saobraćajna signalizacija',
+  lighting: 'Javna rasveta',
+  sidewalk: 'Pločnik i pešačke staze',
+  other: 'Ostali problem',
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'Na čekanju',
+  in_progress: 'U radu',
+  resolved: 'Rešeno',
+  rejected: 'Odbačeno',
+}
+
+function normalizeValue(value: string | null | undefined) {
+  return value?.trim().toLowerCase() ?? ''
+}
+
+function getCategoryLabel(category: string) {
+  return CATEGORY_LABELS[category] ?? category
+}
+
+function getStatusLabel(status: string) {
+  return STATUS_LABELS[status] ?? status
+}
+
+function MetadataIcon({ type }: { type: 'category' | 'status' | 'location' }) {
+  if (type === 'category') {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M2.75 4.25h10.5" />
+        <path d="M2.75 8h10.5" />
+        <path d="M2.75 11.75h6.5" />
+      </svg>
+    )
+  }
+
+  if (type === 'status') {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <circle cx="8" cy="8" r="5.25" />
+        <path d="M8 5.25v3.1l2.15 1.4" />
+      </svg>
+    )
+  }
+
+  return (
+    <svg aria-hidden="true" viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M8 13.25s3.5-3.2 3.5-6.25A3.5 3.5 0 0 0 4.5 7c0 3.05 3.5 6.25 3.5 6.25Z" />
+      <circle cx="8" cy="7" r="1.4" />
+    </svg>
+  )
+}
+
+function MetadataItem({ type, label }: { type: 'category' | 'status' | 'location'; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 print-tag">
+      <MetadataIcon type={type} />
+      <span>{label}</span>
+    </span>
+  )
+}
+
 export default function MapPageClient() {
   const [reports, setReports] = useState<Report[]>([])
   const [loading, setLoading] = useState(true)
@@ -204,6 +268,15 @@ export default function MapPageClient() {
                 <div className="mt-4 space-y-4">
                   {openReports.map((report) => {
                     const location = parseReportLocation(report.tags)
+                    const showPlaceLine = !selectedPlace
+                    const showMunicipalityLine =
+                      !!location.municipality &&
+                      (!selectedPlace ||
+                        normalizeValue(location.municipality) !== normalizeValue(selectedPlace.municipality))
+                    const showDistrictLine =
+                      !!location.district &&
+                      (!selectedPlace ||
+                        normalizeValue(location.district) !== normalizeValue(selectedPlace.district))
 
                     return (
                       <div key={report.id} className="border border-gray-200 rounded-lg p-4 print-card print-item">
@@ -211,20 +284,16 @@ export default function MapPageClient() {
                           <div>
                             <h3 className="font-bold text-lg">{report.title}</h3>
                             <p className="text-sm text-gray-600 mt-1 print-description">{report.description}</p>
-                            <div className="mt-3 flex flex-wrap gap-2 print-tags">
-                              <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs print-tag">
-                                {report.category}
-                              </span>
-                              <span className="inline-block bg-red-100 text-red-800 px-2 py-1 rounded text-xs print-tag">
-                                {report.status}
-                              </span>
+                            <div className="mt-3 flex flex-wrap gap-3 print-tags">
+                              <MetadataItem type="category" label={getCategoryLabel(report.category)} />
+                              <MetadataItem type="status" label={getStatusLabel(report.status)} />
                             </div>
                           </div>
                           <div className="text-sm text-gray-600 md:text-right print-meta">
-                            <p><strong>Mesto:</strong> {getReportPlaceLabel(report)}</p>
-                            {location.municipality && <p><strong>Opština:</strong> {location.municipality}</p>}
-                            {location.district && <p><strong>Okrug:</strong> {location.district}</p>}
-                            <p><strong>Koordinate:</strong> {report.latitude.toFixed(4)}, {report.longitude.toFixed(4)}</p>
+                            {showPlaceLine && <p><strong>Mesto:</strong> {getReportPlaceLabel(report)}</p>}
+                            {showMunicipalityLine && <p><strong>Opština:</strong> {location.municipality}</p>}
+                            {showDistrictLine && <p><strong>Okrug:</strong> {location.district}</p>}
+                            <p className="inline-flex items-center gap-1.5"><MetadataIcon type="location" /><span><strong>Koordinate:</strong> {report.latitude.toFixed(4)}, {report.longitude.toFixed(4)}</span></p>
                           </div>
                         </div>
                       </div>
@@ -245,6 +314,11 @@ export default function MapPageClient() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {selectedReports.map((report) => {
                     const location = parseReportLocation(report.tags)
+                    const showPlaceLine = !selectedPlace
+                    const showMunicipalityLine =
+                      !!location.municipality &&
+                      (!selectedPlace ||
+                        normalizeValue(location.municipality) !== normalizeValue(selectedPlace.municipality))
 
                     return (
                     <div key={report.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-lg transition">
@@ -260,26 +334,14 @@ export default function MapPageClient() {
                       <h3 className="font-bold text-lg mb-2">{report.title}</h3>
                       <p className="text-gray-600 text-sm mb-3">{report.description.substring(0, 100)}...</p>
 
-                      <div className="flex gap-2 mb-2">
-                        <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
-                          {report.category}
-                        </span>
-                        <span
-                          className={`inline-block px-2 py-1 rounded text-xs ${
-                            report.status === 'resolved'
-                              ? 'bg-green-100 text-green-800'
-                              : report.status === 'in_progress'
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : 'bg-red-100 text-red-800'
-                          }`}
-                        >
-                          {report.status}
-                        </span>
+                      <div className="flex flex-wrap gap-3 mb-3">
+                        <MetadataItem type="category" label={getCategoryLabel(report.category)} />
+                        <MetadataItem type="status" label={getStatusLabel(report.status)} />
                       </div>
 
                       <div className="text-sm text-gray-600 space-y-1">
-                        <p><strong>Mesto:</strong> {getReportPlaceLabel(report)}</p>
-                        {location.municipality && <p><strong>Opština:</strong> {location.municipality}</p>}
+                        {showPlaceLine && <p><strong>Mesto:</strong> {getReportPlaceLabel(report)}</p>}
+                        {showMunicipalityLine && <p><strong>Opština:</strong> {location.municipality}</p>}
                       </div>
                     </div>
                     )
