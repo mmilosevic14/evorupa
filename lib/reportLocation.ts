@@ -30,6 +30,9 @@ export interface DistrictGroup {
   reports: Report[]
 }
 
+type PlaceGroupSortMode = 'name-asc' | 'report-count-desc'
+type DistrictGroupSortMode = 'name-asc' | 'report-count-desc'
+
 const LOCATION_TAG_PREFIXES = {
   placeName: 'place:',
   placeType: 'placeType:',
@@ -37,6 +40,49 @@ const LOCATION_TAG_PREFIXES = {
   district: 'district:',
   region: 'region:',
 } as const
+
+const SERBIAN_COLLATOR = new Intl.Collator('sr', {
+  sensitivity: 'base',
+  numeric: true,
+})
+
+function compareText(left: string, right: string) {
+  return SERBIAN_COLLATOR.compare(left, right)
+}
+
+function comparePlaceGroupNames(left: PlaceGroup, right: PlaceGroup) {
+  return (
+    compareText(left.label, right.label) ||
+    compareText(left.municipality, right.municipality) ||
+    compareText(left.district, right.district)
+  )
+}
+
+function compareDistrictGroupNames(left: DistrictGroup, right: DistrictGroup) {
+  return compareText(left.district, right.district) || compareText(left.region, right.region)
+}
+
+function sortPlaceGroups(groups: PlaceGroup[], sortMode: PlaceGroupSortMode) {
+  if (sortMode === 'name-asc') {
+    return groups.sort(comparePlaceGroupNames)
+  }
+
+  return groups.sort(
+    (left, right) =>
+      right.reportCount - left.reportCount || comparePlaceGroupNames(left, right),
+  )
+}
+
+function sortDistrictGroups(groups: DistrictGroup[], sortMode: DistrictGroupSortMode) {
+  if (sortMode === 'name-asc') {
+    return groups.sort(compareDistrictGroupNames)
+  }
+
+  return groups.sort(
+    (left, right) =>
+      right.reportCount - left.reportCount || compareDistrictGroupNames(left, right),
+  )
+}
 
 function normalizeTagValue(value: string) {
   return value.trim().replace(/\|/g, '/').replace(/\s+/g, ' ')
@@ -92,7 +138,10 @@ export function getReportPlaceLabel(report: Report) {
   return `${report.latitude.toFixed(3)}, ${report.longitude.toFixed(3)}`
 }
 
-export function groupReportsByPlace(reports: Report[]) {
+export function groupReportsByPlace(
+  reports: Report[],
+  sortMode: PlaceGroupSortMode = 'report-count-desc',
+) {
   const groups = new Map<string, PlaceGroup>()
 
   reports.forEach((report) => {
@@ -126,10 +175,13 @@ export function groupReportsByPlace(reports: Report[]) {
     current.reports.push(report)
   })
 
-  return Array.from(groups.values()).sort((left, right) => right.reportCount - left.reportCount)
+  return sortPlaceGroups(Array.from(groups.values()), sortMode)
 }
 
-export function groupReportsByDistrict(reports: Report[]) {
+export function groupReportsByDistrict(
+  reports: Report[],
+  sortMode: DistrictGroupSortMode = 'report-count-desc',
+) {
   const groups = new Map<string, DistrictGroup>()
 
   reports.forEach((report) => {
@@ -156,5 +208,5 @@ export function groupReportsByDistrict(reports: Report[]) {
     current.reports.push(report)
   })
 
-  return Array.from(groups.values()).sort((left, right) => right.reportCount - left.reportCount)
+  return sortDistrictGroups(Array.from(groups.values()), sortMode)
 }

@@ -135,7 +135,10 @@ export default function MapPageClient() {
     }
   }, [])
 
-  const districtGroups = useMemo(() => groupReportsByDistrict(reports), [reports])
+  const districtGroups = useMemo(
+    () => groupReportsByDistrict(reports, 'name-asc'),
+    [reports],
+  )
   const selectedDistrict = selectedDistrictKey === 'all'
     ? null
     : districtGroups.find((group) => group.key === selectedDistrictKey) ?? null
@@ -146,21 +149,37 @@ export default function MapPageClient() {
 
     return selectedDistrict.reports
   }, [reports, selectedDistrict])
-  const placeGroups = useMemo(() => groupReportsByPlace(districtFilteredReports), [districtFilteredReports])
+  const placeGroups = useMemo(
+    () => groupReportsByPlace(districtFilteredReports, 'report-count-desc'),
+    [districtFilteredReports],
+  )
+  const placeDropdownGroups = useMemo(
+    () => groupReportsByPlace(districtFilteredReports, 'name-asc'),
+    [districtFilteredReports],
+  )
   const selectedReports = useMemo(() => {
     if (selectedPlaceKey === 'all') {
       return districtFilteredReports
     }
 
-    return placeGroups.find((group) => group.key === selectedPlaceKey)?.reports ?? []
-  }, [districtFilteredReports, placeGroups, selectedPlaceKey])
+    const selectedPlaceGroup = placeGroups.find((group) => group.key === selectedPlaceKey)
+      ?? placeDropdownGroups.find((group) => group.key === selectedPlaceKey)
+
+    return selectedPlaceGroup?.reports ?? []
+  }, [districtFilteredReports, placeDropdownGroups, placeGroups, selectedPlaceKey])
   const openReports = useMemo(
     () => selectedReports.filter((report) => isOpenReport(report)),
     [selectedReports],
   )
-  const selectedPlace = selectedPlaceKey === 'all'
-    ? null
-    : placeGroups.find((group) => group.key === selectedPlaceKey) ?? null
+  const selectedPlace = useMemo(() => {
+    if (selectedPlaceKey === 'all') {
+      return null
+    }
+
+    return placeGroups.find((group) => group.key === selectedPlaceKey)
+      ?? placeDropdownGroups.find((group) => group.key === selectedPlaceKey)
+      ?? null
+  }, [placeDropdownGroups, placeGroups, selectedPlaceKey])
 
   useEffect(() => {
     setSelectedPlaceKey('all')
@@ -220,7 +239,7 @@ export default function MapPageClient() {
                     className="w-full md:max-w-md"
                   >
                     <option value="all">Sva mesta</option>
-                    {placeGroups.map((group) => (
+                    {placeDropdownGroups.map((group) => (
                       <option key={group.key} value={group.key}>
                         {group.label} ({group.reportCount})
                       </option>

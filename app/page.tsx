@@ -27,7 +27,7 @@ async function loadReports() {
 export default async function Home() {
   const reports = await loadReports()
   const openReports = reports.filter((report) => isOpenReport(report))
-  const placeGroups = groupReportsByPlace(reports)
+  const placeGroups = groupReportsByPlace(reports, 'report-count-desc')
   const featuredPlaces = placeGroups.slice(0, 6)
   const featuredReports = openReports.slice(0, 6)
 
