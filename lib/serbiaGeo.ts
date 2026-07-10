@@ -66,7 +66,7 @@ export function findNearestSettlement(
   longitude: number,
   settlements: SerbiaSettlement[],
   maxDistanceKilometers = 25,
-) {
+): SerbiaSettlement | null {
   let closestSettlement: SerbiaSettlement | null = null
   let closestDistance = Number.POSITIVE_INFINITY
 
