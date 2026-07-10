@@ -4,20 +4,26 @@ const path = require('path')
 const repoRoot = path.resolve(__dirname, '..')
 const isWindows = process.platform === 'win32'
 
-function run(command, args, extraEnv = {}) {
+function run(command, args, extraEnv = {}, unsetEnv = []) {
   return new Promise((resolve, reject) => {
+    const env = {
+      ...process.env,
+      CI: '1',
+      NO_UPDATE_NOTIFIER: '1',
+      npm_config_update_notifier: 'false',
+      YARN_ENABLE_TELEMETRY: '0',
+      ...extraEnv,
+    }
+
+    for (const key of unsetEnv) {
+      delete env[key]
+    }
+
     const child = spawn(command, args, {
       cwd: repoRoot,
       stdio: 'inherit',
       shell: false,
-      env: {
-        ...process.env,
-        CI: '1',
-        NO_UPDATE_NOTIFIER: '1',
-        npm_config_update_notifier: 'false',
-        YARN_ENABLE_TELEMETRY: '0',
-        ...extraEnv,
-      },
+      env,
     })
 
     child.on('error', reject)
@@ -44,7 +50,8 @@ async function main() {
 
   await run(nodeCommand, vercelArgs, {
     NODE_TLS_REJECT_UNAUTHORIZED: '0',
-  })
+    VERCEL_TELEMETRY_DISABLED: '1',
+  }, ['VERCEL_TOKEN'])
 
   await run(nodeCommand, [nextOnPagesCliPath, '--skip-build'])
 }
