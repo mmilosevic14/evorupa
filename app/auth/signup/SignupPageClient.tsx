@@ -33,7 +33,9 @@ export default function SignupPageClient() {
       if (error) {
         setError(error.message)
       } else if (data.user) {
-        await syncUserProfile(supabase, data.user, { fullName })
+        if (data.session) {
+          await syncUserProfile(supabase, data.user, { fullName })
+        }
         setSuccess(true)
       }
     } catch {

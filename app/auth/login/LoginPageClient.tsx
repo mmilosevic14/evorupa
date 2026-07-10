@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
+import { syncUserProfile } from '@/utils/supabase/profile'
 
 export default function LoginPageClient() {
   const [email, setEmail] = useState('')
@@ -25,6 +26,9 @@ export default function LoginPageClient() {
       if (error) {
         setError(error.message)
       } else if (data) {
+        if (data.user) {
+          await syncUserProfile(supabase, data.user).catch(() => undefined)
+        }
         window.location.href = '/map'
       }
     } catch {
