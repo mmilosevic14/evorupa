@@ -172,7 +172,13 @@ The CI/CD pipeline will:
 2. Run type checks
 3. Run linting
 4. Build for Cloudflare
-5. Deploy to Cloudflare Pages
+
+Deployment note:
+
+- The workflow validates the build only.
+- Production deployment is handled by Cloudflare Pages' native GitHub integration.
+- Cloudflare Pages must be connected to the current repository slug `mmilosevic14/evorupa`.
+- If Cloudflare is still connected to `mmilosevic14/gderupa`, `git push origin main` can succeed while `evorupa.pages.dev` keeps serving an older build.
 
 Check the build status in GitHub → Actions.
 

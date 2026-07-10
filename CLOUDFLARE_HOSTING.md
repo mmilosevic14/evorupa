@@ -42,8 +42,15 @@ Workflow file:
 Behavior:
 
 - pull_request to main/master: install, type-check, lint, build
-- push to main/master: install, type-check, lint, build, deploy to Cloudflare Pages
+- push to main/master: install, type-check, lint, build
+- deployment is handled by Cloudflare Pages native GitHub integration, not by GitHub Actions
 - workflow_dispatch: manual trigger
+
+Important:
+
+- Cloudflare Pages must be connected to the active GitHub repository slug.
+- This repository has moved from `mmilosevic14/gderupa` to `mmilosevic14/evorupa`.
+- If Pages is still connected to the old repository slug, pushes can succeed on GitHub while `evorupa.pages.dev` keeps serving a stale deployment.
 
 ## 4. Local Build and Deploy
 
@@ -84,9 +91,12 @@ gh auth login
 
 Verify CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN secrets exist in GitHub.
 
-### Build succeeds but deploy fails in CI
+### Build succeeds but production stays stale
 
-Check workflow run logs for the deploy step in cloudflare-pages.yml.
+Check two things first:
+
+- Cloudflare Pages project is connected to `mmilosevic14/evorupa`
+- Cloudflare Pages build settings still use `npm run build:cf` and `.vercel/output/static`
 
 ### Auth works local but not in production
 
