@@ -22,7 +22,6 @@
     "noUnusedParameters": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
-    "baseUrl": ".",
     "paths": {
       "@/*": [
         "./*"
@@ -30,7 +29,7 @@
     },
     "incremental": true,
     "isolatedModules": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "declaration": true,
     "declarationMap": true,

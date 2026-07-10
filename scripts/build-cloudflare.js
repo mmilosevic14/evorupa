@@ -39,8 +39,8 @@ async function main() {
   const nextOnPagesCliPath = path.join(repoRoot, 'node_modules', '@cloudflare', 'next-on-pages', 'dist', 'index.js')
 
   const vercelArgs = isWindows
-    ? ['--require', preloadPath, vercelCliPath, 'build']
-    : [vercelCliPath, 'build']
+    ? ['--require', preloadPath, vercelCliPath, 'build', '--yes']
+    : [vercelCliPath, 'build', '--yes']
 
   await run(nodeCommand, vercelArgs, {
     NODE_TLS_REJECT_UNAUTHORIZED: '0',
