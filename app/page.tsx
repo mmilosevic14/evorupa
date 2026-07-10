@@ -5,7 +5,6 @@ import { getReportPlaceLabel, groupReportsByPlace, isOpenReport } from '@/lib/re
 import type { Report } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
-export const runtime = 'edge'
 
 async function loadReports() {
   const { url, publishableKey } = getSupabaseConfig()

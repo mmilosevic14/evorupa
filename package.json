@@ -20,7 +20,7 @@
     "supabase:export-settlements-sql": "node scripts/export-settlements-sql.js",
     "supabase:import-settlements": "powershell -ExecutionPolicy Bypass -File scripts/import-settlements-json.ps1",
     "seed:test-serbia": "node scripts/seed-serbia-test-data.js",
-    "deploy:cf": "npm run build:cf && npx wrangler pages deploy .vercel/output/static --project-name evorupa",
+    "deploy:cf": "npm run build:cf && npx wrangler pages deploy .open-next/assets --project-name evorupa",
     "sync:cf:secrets": "powershell -ExecutionPolicy Bypass -File scripts/sync-cloudflare-secrets.ps1"
   },
   "dependencies": {
@@ -29,7 +29,7 @@
     "axios": "^1.6.0",
     "leaflet": "^1.9.0",
     "mapbox-gl": "^2.15.0",
-    "next": "15.5.2",
+    "next": "15.5.20",
     "next-pwa": "^5.6.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -39,20 +39,21 @@
     "zustand": "^4.4.0"
   },
   "devDependencies": {
-    "@cloudflare/next-on-pages": "^1.13.14",
+    "@opennextjs/cloudflare": "^1.20.1",
     "@types/leaflet": "^1.9.0",
     "@types/node": "^20.0.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@vitest/coverage-v8": "^4.1.10",
     "autoprefixer": "^10.4.0",
+    "esbuild": "0.25.4",
     "eslint": "^8.57.1",
-    "eslint-config-next": "15.5.2",
+    "eslint-config-next": "15.5.20",
     "pg": "^8.13.1",
     "postcss": "^8.4.0",
     "tailwindcss": "^3.3.0",
     "typescript": "^5.3.0",
     "vitest": "^4.1.10",
-    "wrangler": "^3.114.14"
+    "wrangler": "^4.110.0"
   }
 }

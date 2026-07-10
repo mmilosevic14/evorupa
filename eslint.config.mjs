@@ -16,6 +16,7 @@ const config = [
 			'.next-build/**',
 			'.next-prod/**',
 			'.vercel/**',
+			'.open-next/**',
 			'out/**',
 			'build/**',
 			'coverage/**',

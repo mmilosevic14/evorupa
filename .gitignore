@@ -13,6 +13,7 @@ coverage
 out
 build
 .vercel
+.open-next
 
 # Misc
 .DS_Store
