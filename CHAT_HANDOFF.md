@@ -4,39 +4,60 @@ Use this file when opening a new chat with this folder.
 
 ## Current State
 
-- Next.js 14 + TypeScript app scaffold is in place.
-- Supabase integration is implemented (client, server, middleware, auth pages).
-- Cloudflare Pages CI/CD lifecycle is configured.
+- Next.js 15.5.20 + TypeScript full-featured app.
+- Supabase integration: auth (login/signup), reports CRUD, real-time updates.
+- Interactive Leaflet map with Serbia district/settlement filters, place grouping, popup resizing, print layout.
+- Report submission with photo upload and image processing.
+- Admin page with admin-gating (`lib/adminAccess.ts`).
+- Serbia settlements data: `data/serbia-settlements-full.json` (81k entries), geo utilities in `lib/serbiaGeo.ts` and `lib/serbiaDistricts.ts`.
+- Homepage shows place groups and open reports.
+- Pagination for reported problems on the map page.
+- Automated test coverage: 19 tests across 5 test files (vitest).
+- Cloudflare Pages CI/CD via `@opennextjs/cloudflare` — builds to `.open-next/assets`.
+
+## Build System
+
+The app uses `@opennextjs/cloudflare` (NOT the deprecated `@cloudflare/next-on-pages`).
+
+- **Do NOT** add `export const runtime = 'edge'` to page files — it is incompatible with OpenNext/Cloudflare.
+- Build command: `npm run build:cf` (runs `scripts/build-cloudflare.js` → `opennextjs-cloudflare build`)
+- Output: `.open-next/assets`
+- Config: `open-next.config.ts` and `wrangler.toml`
 
 ## Critical Files
 
-- README.md
-- GETTING_STARTED.md
-- PROJECT_SUMMARY.md
-- SETUP_DATABASE.md
-- SUPABASE_INTEGRATION.md
-- CLOUDFLARE_HOSTING.md
-- .github/workflows/cloudflare-pages.yml
+- `app/map/MapPageClient.tsx` — interactive map with filters
+- `app/report/ReportPageClient.tsx` — report submission form
+- `app/admin/AdminPageClient.tsx` — admin moderation
+- `lib/serbiaGeo.ts`, `lib/serbiaDistricts.ts` — Serbia geo utilities
+- `lib/reportLocation.ts` — place labeling and grouping
+- `lib/adminAccess.ts` — admin access gating
+- `lib/reportImageProcessing.ts` — image optimization
+- `data/serbia-settlements-full.json` — full settlements dataset
+- `.github/workflows/cloudflare-pages.yml` — CI (Node 22, npm ci)
+- `open-next.config.ts`, `wrangler.toml` — Cloudflare config
+- `scripts/build-cloudflare.js` — build wrapper
 
 ## Local Secret Files
 
-- .env.local (Supabase values)
-- .env.cloudflare.local (Cloudflare values)
+- `.env.local` (Supabase values)
+- `.env.cloudflare.local` (Cloudflare values)
 
 Both are git-ignored and should not be committed.
 
 ## What is Already Automated
 
-- CI build on pull requests and pushes
-- Deploy to Cloudflare Pages on push to main/master
+- CI build on pull requests and pushes (type-check, lint, test, build:cf)
+- Deploy to Cloudflare Pages on push to main/master (native GitHub integration)
 - Helper script for syncing Cloudflare secrets to GitHub
 
 ## First Commands in New Chat
 
 ```bash
-npm install
+npm ci
 npm run type-check
 npm run lint
+npm test
 npm run build:cf
 ```
 
@@ -51,4 +72,4 @@ npm run build:cf
 
 ## Suggested Prompt for Next Chat
 
-"Read CHAT_HANDOFF.md and continue implementation from current state. First validate npm scripts, Cloudflare workflow, and Supabase auth/data flow end-to-end, then continue with map/report/admin feature completion."
+"Read CHAT_HANDOFF.md and continue implementation from current state. All core features are implemented and Cloudflare build is working. Focus on UX improvements, additional test coverage, or new feature requests."
