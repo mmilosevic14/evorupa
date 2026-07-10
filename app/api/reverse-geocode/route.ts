@@ -9,6 +9,8 @@ import {
   type SerbiaSettlement,
 } from '@/lib/serbiaGeo'
 
+export const runtime = 'edge'
+
 function firstString(...values: Array<string | undefined>) {
   return values.find((value) => typeof value === 'string' && value.trim().length > 0)?.trim() ?? ''
 }

@@ -1,5 +1,7 @@
 import Link from 'next/link'
 
+export const runtime = 'edge'
+
 export default function NotFound() {
   return (
     <main className="min-h-screen bg-gray-50 text-gray-900">

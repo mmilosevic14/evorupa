@@ -2,6 +2,7 @@ import AdminPageClient from './AdminPageClient'
 import { getCurrentAdminState } from '@/lib/adminAccess'
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'edge'
 
 export default async function AdminPage() {
   const { isAdmin } = await getCurrentAdminState()
