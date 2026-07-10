@@ -2,9 +2,8 @@ const { spawn } = require('child_process')
 const path = require('path')
 
 const repoRoot = path.resolve(__dirname, '..')
-const isWindows = process.platform === 'win32'
 
-function run(command, args, extraEnv = {}, unsetEnv = []) {
+function run(command, args, extraEnv = {}) {
   return new Promise((resolve, reject) => {
     const env = {
       ...process.env,
@@ -13,10 +12,6 @@ function run(command, args, extraEnv = {}, unsetEnv = []) {
       npm_config_update_notifier: 'false',
       YARN_ENABLE_TELEMETRY: '0',
       ...extraEnv,
-    }
-
-    for (const key of unsetEnv) {
-      delete env[key]
     }
 
     const child = spawn(command, args, {
@@ -40,20 +35,9 @@ function run(command, args, extraEnv = {}, unsetEnv = []) {
 
 async function main() {
   const nodeCommand = process.execPath
-  const preloadPath = path.join(__dirname, 'vercel-build-windows-preload.js')
-  const vercelCliPath = path.join(repoRoot, 'node_modules', 'vercel', 'dist', 'index.js')
-  const nextOnPagesCliPath = path.join(repoRoot, 'node_modules', '@cloudflare', 'next-on-pages', 'dist', 'index.js')
+  const openNextCliPath = path.join(repoRoot, 'node_modules', '@opennextjs', 'cloudflare', 'dist', 'cli', 'index.js')
 
-  const vercelArgs = isWindows
-    ? ['--require', preloadPath, vercelCliPath, 'build', '--yes']
-    : [vercelCliPath, 'build', '--yes']
-
-  await run(nodeCommand, vercelArgs, {
-    NODE_TLS_REJECT_UNAUTHORIZED: '0',
-    VERCEL_TELEMETRY_DISABLED: '1',
-  }, ['VERCEL_TOKEN'])
-
-  await run(nodeCommand, [nextOnPagesCliPath, '--skip-build'])
+  await run(nodeCommand, [openNextCliPath, 'build'])
 }
 
 main().catch((error) => {
