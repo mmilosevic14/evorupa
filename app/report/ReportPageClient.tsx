@@ -6,6 +6,11 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { syncUserProfile } from '@/utils/supabase/profile'
 import { buildLocationTags, type ReportLocationDetails } from '@/lib/reportLocation'
+import {
+  getScaledImageDimensions,
+  MAX_IMAGE_BYTES,
+  WEBP_QUALITY,
+} from '@/lib/reportImageProcessing'
 import { SERBIA_DISTRICT_BOUNDARIES } from '@/lib/serbiaDistricts'
 
 const DEFAULT_REPORT_LOCATION = {
@@ -15,9 +20,6 @@ const DEFAULT_REPORT_LOCATION = {
 
 type LocationSource = 'default' | 'browser' | 'photo'
 
-const MAX_IMAGE_BYTES = 15 * 1024 * 1024
-const MAX_IMAGE_DIMENSION = 1600
-const WEBP_QUALITY = 0.82
 const DISTRICT_OPTIONS = Array.from(
   new Set(SERBIA_DISTRICT_BOUNDARIES.map((feature) => feature.district)),
 ).sort((left, right) => left.localeCompare(right, 'sr'))
@@ -298,10 +300,10 @@ async function readSourceBlob({ file, sourceUrl }: { file?: File; sourceUrl?: st
 async function processImageToWebp({ file, sourceUrl }: { file?: File; sourceUrl?: string }) {
   const sourceBlob = await readSourceBlob({ file, sourceUrl })
   const image = await loadImageFromBlob(sourceBlob)
-  const dominantDimension = Math.max(image.naturalWidth, image.naturalHeight, 1)
-  const scale = Math.min(1, MAX_IMAGE_DIMENSION / dominantDimension)
-  const targetWidth = Math.max(1, Math.round(image.naturalWidth * scale))
-  const targetHeight = Math.max(1, Math.round(image.naturalHeight * scale))
+  const { width: targetWidth, height: targetHeight } = getScaledImageDimensions(
+    image.naturalWidth,
+    image.naturalHeight,
+  )
   const canvas = document.createElement('canvas')
 
   canvas.width = targetWidth

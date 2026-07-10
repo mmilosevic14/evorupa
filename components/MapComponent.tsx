@@ -53,7 +53,6 @@ export default function MapComponent({ reports = [], selectedDistrict = null }: 
       center: DEFAULT_MAP_CENTER,
       zoom: 7,
       attributionControl: false,
-      preferCanvas: true,
       fadeAnimation: false,
       zoomAnimation: false,
       markerZoomAnimation: false,
