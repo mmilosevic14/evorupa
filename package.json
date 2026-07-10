@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:cf": "npx @cloudflare/next-on-pages",
+    "build:cf": "node scripts/build-cloudflare.js",
     "start": "next start",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",

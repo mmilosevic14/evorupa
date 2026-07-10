@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 import 'leaflet/dist/leaflet.css'
 import Link from "next/link";
-import { getCurrentAdminState } from '@/lib/adminAccess'
+import AppNavLinks from '@/components/AppNavLinks'
+
+export const runtime = 'edge'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://evorupa.rs'),
@@ -34,13 +36,11 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { isAdmin } = await getCurrentAdminState()
-
   return (
     <html lang="sr">
       <body className="antialiased">
@@ -49,19 +49,7 @@ export default async function RootLayout({
             <Link href="/" className="text-2xl font-bold hover:text-blue-100">
               EvoRupa
             </Link>
-            <div className="space-x-4">
-              <Link href="/map" className="hover:text-blue-100 transition">
-                Mapa
-              </Link>
-              <Link href="/report" className="hover:text-blue-100 transition">
-                Prijavi problem
-              </Link>
-              {isAdmin && (
-                <Link href="/admin" className="hover:text-blue-100 transition">
-                  Admin
-                </Link>
-              )}
-            </div>
+            <AppNavLinks />
           </div>
         </nav>
         {children}
