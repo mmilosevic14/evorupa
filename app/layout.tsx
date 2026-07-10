@@ -4,7 +4,6 @@ import 'leaflet/dist/leaflet.css'
 import Link from "next/link";
 import AppNavLinks from '@/components/AppNavLinks'
 
-export const runtime = 'edge'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://evorupa.rs'),
