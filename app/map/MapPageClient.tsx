@@ -303,7 +303,7 @@ export default function MapPageClient() {
 
             <MapComponent reports={selectedReports} selectedDistrict={selectedDistrict?.district ?? null} />
 
-            {!selectedPlace && (
+            {!selectedPlace && !selectedDistrict && (
             <div className="mt-8 bg-white rounded-lg shadow-md p-6 no-print">
               <h2 className="text-2xl font-bold mb-4">Pregled po mestu</h2>
 
