@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { DEFAULT_REPORT_CATEGORIES, sortCategories } from '@/lib/reportMetadata'
 import { createClient } from '@/utils/supabase/client'
 import { syncUserProfile } from '@/utils/supabase/profile'
 import { buildLocationTags, type ReportLocationDetails } from '@/lib/reportLocation'
@@ -203,6 +204,13 @@ interface FormData {
   photo?: File | null
 }
 
+type CategoryOption = {
+  code: string
+  label_sr: string
+  description: string | null
+  sort_order: number
+}
+
 function isValidHttpUrl(value: string) {
   try {
     const parsed = new URL(value)
@@ -359,6 +367,7 @@ export default function ReportPageClient() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [user, setUser] = useState<any>(null)
+  const [categoryOptions, setCategoryOptions] = useState<CategoryOption[]>(() => sortCategories(DEFAULT_REPORT_CATEGORIES))
   const [locationSource, setLocationSource] = useState<LocationSource>('default')
   const [locationDetails, setLocationDetails] = useState<ReportLocationDetails>(EMPTY_LOCATION_DETAILS)
   const [locationDetailsLoading, setLocationDetailsLoading] = useState(false)
@@ -376,9 +385,20 @@ export default function ReportPageClient() {
   useEffect(() => {
     const checkAuth = async () => {
       const supabase = createClient()
-      const {
-        data: { user: authUser },
-      } = await supabase.auth.getUser()
+      const [
+        {
+          data: { user: authUser },
+        },
+        { data: categoryRows },
+      ] = await Promise.all([
+        supabase.auth.getUser(),
+        supabase.from('report_categories').select('code, label_sr, description, sort_order'),
+      ])
+
+      if (categoryRows?.length) {
+        setCategoryOptions(sortCategories(categoryRows))
+      }
+
       setUser(authUser)
     }
 
@@ -565,7 +585,7 @@ export default function ReportPageClient() {
           longitude: formData.longitude,
           photo_url: photoUrl,
           status: 'pending',
-          priority: 'medium',
+          priority: null,
           tags: buildLocationTags(locationDetails),
           upvotes: 0,
           views: 0,
@@ -644,12 +664,9 @@ export default function ReportPageClient() {
               required
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
             >
-              <option value="road_damage">Oštećenje puta</option>
-              <option value="pothole">Rupa na putu</option>
-              <option value="traffic_sign">Problem sa saobraćajnom znakom</option>
-              <option value="lighting">Problem sa osvetljenjem</option>
-              <option value="sidewalk">Problem sa pločnikom</option>
-              <option value="other">Ostalo</option>
+              {categoryOptions.map((category) => (
+                <option key={category.code} value={category.code}>{category.label_sr}</option>
+              ))}
             </select>
           </div>
 

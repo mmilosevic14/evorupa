@@ -2,6 +2,15 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import ReportViewsTracker from '@/components/ReportViewsTracker'
+import {
+  buildCategoryLabelMap,
+  buildStatusLabelMap,
+  DEFAULT_REPORT_CATEGORIES,
+  DEFAULT_REPORT_STATUSES,
+  sortCategories,
+  sortStatuses,
+} from '@/lib/reportMetadata'
 import { createClient } from '@/utils/supabase/client'
 import { syncUserProfile } from '@/utils/supabase/profile'
 import type { Report } from '@/lib/supabase'
@@ -15,21 +24,19 @@ type ProfileState = {
   showAuthorName: boolean
 }
 
-const CATEGORY_OPTIONS = [
-  { value: 'road_damage', label: 'Oštećenje puta' },
-  { value: 'pothole', label: 'Rupa na putu' },
-  { value: 'traffic_sign', label: 'Saobraćajna signalizacija' },
-  { value: 'lighting', label: 'Javna rasveta' },
-  { value: 'sidewalk', label: 'Pločnik i pešačke staze' },
-  { value: 'other', label: 'Ostalo' },
-]
+type CategoryOption = {
+  code: string
+  label_sr: string
+  description: string | null
+  sort_order: number
+}
 
-const STATUS_OPTIONS = [
-  { value: 'pending', label: 'Na čekanju' },
-  { value: 'in_progress', label: 'U radu' },
-  { value: 'resolved', label: 'Rešeno' },
-  { value: 'rejected', label: 'Odbačeno' },
-]
+type StatusOption = {
+  code: 'pending' | 'in_progress' | 'resolved' | 'rejected'
+  label_sr: string
+  description: string | null
+  sort_order: number
+}
 
 export default function AccountPageClient() {
   const router = useRouter()
@@ -38,6 +45,11 @@ export default function AccountPageClient() {
   const [user, setUser] = useState<{ id: string } | null>(null)
   const [profile, setProfile] = useState<ProfileState>({ fullName: '', email: '', showAuthorName: false })
   const [reports, setReports] = useState<Report[]>([])
+  const [engagementEnabled, setEngagementEnabled] = useState(false)
+  const [categoryOptions, setCategoryOptions] = useState<CategoryOption[]>(() => sortCategories(DEFAULT_REPORT_CATEGORIES))
+  const [statusOptions, setStatusOptions] = useState<StatusOption[]>(() => sortStatuses(DEFAULT_REPORT_STATUSES))
+  const [categoryLabels, setCategoryLabels] = useState<Record<string, string>>(() => buildCategoryLabelMap())
+  const [statusLabels, setStatusLabels] = useState<Record<string, string>>(() => buildStatusLabelMap())
   const [editingReportId, setEditingReportId] = useState<string | null>(null)
   const [editableReport, setEditableReport] = useState<EditableReport | null>(null)
   const [error, setError] = useState('')
@@ -57,7 +69,12 @@ export default function AccountPageClient() {
         return
       }
 
-      const [{ data: profileRow }, { data: reportRows, error: reportsError }] = await Promise.all([
+      const [
+        { data: profileRow },
+        { data: reportRows, error: reportsError },
+        { data: categoryRows, error: categoryError },
+        { data: statusRows, error: statusError },
+      ] = await Promise.all([
         supabase
           .from('users')
           .select('full_name, email, is_public')
@@ -68,6 +85,8 @@ export default function AccountPageClient() {
           .select('*')
           .eq('user_id', authUser.id)
           .order('created_at', { ascending: false }),
+        supabase.from('report_categories').select('code, label_sr, description, sort_order'),
+        supabase.from('report_statuses').select('code, label_sr, description, sort_order'),
       ])
 
       if (reportsError) {
@@ -79,6 +98,15 @@ export default function AccountPageClient() {
       }
 
       setUser({ id: authUser.id })
+      if (categoryRows?.length) {
+        setCategoryOptions(sortCategories(categoryRows))
+        setCategoryLabels(buildCategoryLabelMap(categoryRows))
+      }
+      if (statusRows?.length) {
+        setStatusOptions(sortStatuses(statusRows))
+        setStatusLabels(buildStatusLabelMap(statusRows))
+      }
+      setEngagementEnabled(!categoryError && !statusError)
       setProfile({
         fullName: profileRow?.full_name ?? authUser.user_metadata?.full_name ?? '',
         email: profileRow?.email ?? authUser.email ?? '',
@@ -278,6 +306,7 @@ export default function AccountPageClient() {
         </section>
 
         <section className="rounded-2xl bg-white p-8 shadow-md">
+          {engagementEnabled && <ReportViewsTracker trackingKey="account:reports" reportIds={reports.map((report) => report.id)} />}
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>
               <h2 className="text-2xl font-bold text-gray-900">Moje prijave</h2>
@@ -315,14 +344,14 @@ export default function AccountPageClient() {
                             onChange={(event) => setEditableReport((current) => current ? { ...current, category: event.target.value } : current)}
                             className="rounded-lg border border-gray-300 px-3 py-2"
                           >
-                            {CATEGORY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                            {categoryOptions.map((option) => <option key={option.code} value={option.code}>{option.label_sr}</option>)}
                           </select>
                           <select
                             value={editableReport.status}
                             onChange={(event) => setEditableReport((current) => current ? { ...current, status: event.target.value as EditableReport['status'] } : current)}
                             className="rounded-lg border border-gray-300 px-3 py-2"
                           >
-                            {STATUS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                            {statusOptions.map((option) => <option key={option.code} value={option.code}>{option.label_sr}</option>)}
                           </select>
                         </div>
                         <div className="flex flex-wrap gap-3">
@@ -343,8 +372,8 @@ export default function AccountPageClient() {
                             </div>
                           </div>
                           <div className="flex flex-col items-start gap-2 md:items-end">
-                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700">{report.status}</span>
-                            <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">{report.category}</span>
+                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700">{statusLabels[report.status] ?? report.status}</span>
+                            <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">{categoryLabels[report.category] ?? report.category}</span>
                           </div>
                         </div>
                         <div className="mt-5 flex flex-wrap gap-3">

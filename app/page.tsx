@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { createClient } from '@supabase/supabase-js'
+import ReportViewsTracker from '@/components/ReportViewsTracker'
 import { buildVisibleAuthorMap, getVisibleAuthorName } from '@/lib/reportAuthors'
+import { buildStatusLabelMap, sortStatuses } from '@/lib/reportMetadata'
 import { getSupabaseConfig } from '@/lib/supabaseConfig'
 import { getReportPlaceLabel, groupReportsByPlace, isOpenReport } from '@/lib/reportLocation'
 import type { Report } from '@/lib/supabase'
@@ -41,9 +43,23 @@ async function loadAuthorNames(reports: Report[]) {
   return buildVisibleAuthorMap(data ?? [])
 }
 
+async function loadStatusLabels() {
+  const { url, publishableKey } = getSupabaseConfig()
+  const supabase = createClient(url, publishableKey)
+  const { data, error } = await supabase
+    .from('report_statuses')
+    .select('code, label_sr, description, sort_order')
+
+  return {
+    labels: buildStatusLabelMap(data?.length ? sortStatuses(data) : undefined),
+    enabled: !error,
+  }
+}
+
 export default async function Home() {
   const reports = await loadReports()
   const authorNames = await loadAuthorNames(reports)
+  const { labels: statusLabels, enabled: engagementEnabled } = await loadStatusLabels()
   const openReports = reports.filter((report) => isOpenReport(report))
   const placeGroups = groupReportsByPlace(reports, 'report-count-desc')
   const featuredPlaces = placeGroups.slice(0, 6)
@@ -151,6 +167,7 @@ export default async function Home() {
             </div>
 
             <div className="rounded-2xl bg-white p-6 shadow-md">
+              {engagementEnabled && <ReportViewsTracker trackingKey="home:featured-reports" reportIds={featuredReports.map((report) => report.id)} />}
               <h4 className="text-xl font-bold">Otvoreni problemi</h4>
               {featuredReports.length === 0 ? (
                 <p className="mt-4 text-gray-600">Nema otvorenih problema za prikaz.</p>
@@ -172,7 +189,7 @@ export default async function Home() {
                           )}
                         </div>
                         <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
-                          {report.status}
+                          {statusLabels[report.status] ?? report.status}
                         </span>
                       </div>
                     </div>

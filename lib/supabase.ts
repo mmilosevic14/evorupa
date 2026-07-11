@@ -30,6 +30,35 @@ export type Database = {
         Insert: Omit<Database['public']['Tables']['reports']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['reports']['Insert']>
       }
+      report_categories: {
+        Row: {
+          code: string
+          label_sr: string
+          description: string | null
+          sort_order: number
+        }
+        Insert: Database['public']['Tables']['report_categories']['Row']
+        Update: Partial<Database['public']['Tables']['report_categories']['Insert']>
+      }
+      report_statuses: {
+        Row: {
+          code: 'pending' | 'in_progress' | 'resolved' | 'rejected'
+          label_sr: string
+          description: string | null
+          sort_order: number
+        }
+        Insert: Database['public']['Tables']['report_statuses']['Row']
+        Update: Partial<Database['public']['Tables']['report_statuses']['Insert']>
+      }
+      report_upvotes: {
+        Row: {
+          report_id: string
+          user_id: string
+          created_at: string
+        }
+        Insert: Database['public']['Tables']['report_upvotes']['Row']
+        Update: Partial<Database['public']['Tables']['report_upvotes']['Insert']>
+      }
       settlements: {
         Row: {
           id: string
@@ -63,7 +92,24 @@ export type Database = {
       }
     }
     Views: {}
-    Functions: {}
+    Functions: {
+      increment_report_views: {
+        Args: {
+          report_ids: string[]
+        }
+        Returns: undefined
+      }
+      toggle_report_upvote: {
+        Args: {
+          p_report_id: string
+        }
+        Returns: {
+          has_upvoted: boolean
+          priority: string
+          upvotes: number
+        }[]
+      }
+    }
     Enums: {}
   }
 }

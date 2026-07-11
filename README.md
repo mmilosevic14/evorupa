@@ -115,12 +115,27 @@ Vidi `SETUP_DATABASE.md` za detaljnu dokumentaciju
 1. Dodaj secrets u GitHub repozitorijum:
 	- CLOUDFLARE_ACCOUNT_ID
 	- CLOUDFLARE_API_TOKEN
+2. Za lokalni ručni deploy proveri Wrangler pristup:
+```bash
+npx wrangler login
+npx wrangler whoami
+```
+3. Ako koristiš lokalni helper za sync secrets, napravi `.env.cloudflare.local` sa:
+```bash
+CLOUDFLARE_ACCOUNT_ID=your-account-id
+CLOUDFLARE_API_TOKEN=your-api-token
+```
 2. Opcija za automatski sync iz lokalnog env fajla:
 ```bash
 npm run sync:cf:secrets
 ```
-3. Push na `main` ili `master` branch
-4. GitHub Actions workflow treba da validira build, a Cloudflare Pages Git integration ili lokalni Pages deploy objavljuje sajt
+4. Push na `main` ili `master` branch
+5. GitHub Actions workflow treba da validira build, a Cloudflare Pages Git integration ili lokalni Pages deploy objavljuje sajt
+
+Napomena o pristupu:
+
+- automatski Cloudflare Pages build sa GitHub-a ne koristi lokalni `wrangler login`
+- lokalni `npm run deploy:pages` i `npm run deploy:worker` koriste Wrangler autentifikaciju ili token-based pristup
 
 Lokalni build za Cloudflare Pages:
 ```bash

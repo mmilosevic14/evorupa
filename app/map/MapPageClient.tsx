@@ -1,8 +1,12 @@
 'use client'
 
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
+import ReportViewsTracker from '@/components/ReportViewsTracker'
+import { incrementReportViews, toggleReportUpvote } from '@/lib/reportEngagement'
+import { buildCategoryLabelMap, buildStatusLabelMap, derivePriorityFromUpvotes, sortCategories, sortStatuses } from '@/lib/reportMetadata'
 import { buildVisibleAuthorMap, getVisibleAuthorName } from '@/lib/reportAuthors'
 import { createClient } from '@/utils/supabase/client'
 import { getReportPhotoUrl } from '@/lib/reportMedia'
@@ -18,21 +22,6 @@ const MapComponent = dynamic(() => import('@/components/MapComponent'), {
   ),
 })
 
-const CATEGORY_LABELS: Record<string, string> = {
-  road_damage: 'Oštećenje puta',
-  traffic_sign: 'Saobraćajna signalizacija',
-  lighting: 'Javna rasveta',
-  sidewalk: 'Pločnik i pešačke staze',
-  other: 'Ostali problem',
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  pending: 'Na čekanju',
-  in_progress: 'U radu',
-  resolved: 'Rešeno',
-  rejected: 'Odbačeno',
-}
-
 const REPORTS_PAGE_SIZE = 6
 
 function normalizeValue(value: string | null | undefined) {
@@ -40,11 +29,25 @@ function normalizeValue(value: string | null | undefined) {
 }
 
 function getCategoryLabel(category: string) {
-  return CATEGORY_LABELS[category] ?? category
+  return category
 }
 
 function getStatusLabel(status: string) {
-  return STATUS_LABELS[status] ?? status
+  return status
+}
+
+function getPriorityLabel(upvotes: number | null | undefined) {
+  const priority = derivePriorityFromUpvotes(upvotes)
+
+  if (priority === 'high') {
+    return 'Visok'
+  }
+
+  if (priority === 'medium') {
+    return 'Srednji'
+  }
+
+  return 'Nizak'
 }
 
 function MetadataIcon({ type }: { type: 'category' | 'status' | 'location' }) {
@@ -85,8 +88,15 @@ function MetadataItem({ type, label }: { type: 'category' | 'status' | 'location
 }
 
 export default function MapPageClient() {
+  const router = useRouter()
   const [reports, setReports] = useState<Report[]>([])
   const [authorNames, setAuthorNames] = useState<Map<string, string>>(new Map())
+  const [categoryLabels, setCategoryLabels] = useState<Record<string, string>>(() => buildCategoryLabelMap())
+  const [statusLabels, setStatusLabels] = useState<Record<string, string>>(() => buildStatusLabelMap())
+  const [engagementEnabled, setEngagementEnabled] = useState(false)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [upvotedReportIds, setUpvotedReportIds] = useState<Set<string>>(new Set())
+  const [upvotePendingId, setUpvotePendingId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedDistrictKey, setSelectedDistrictKey] = useState('all')
   const [selectedPlaceKey, setSelectedPlaceKey] = useState('all')
@@ -98,14 +108,35 @@ export default function MapPageClient() {
 
     const fetchReports = async () => {
       try {
-        const { data, error } = await supabase
-          .from('reports')
-          .select('*')
-          .order('created_at', { ascending: false })
+        const [
+          { data: reportRows, error: reportsError },
+          { data: categoryRows, error: categoryError },
+          { data: statusRows, error: statusError },
+          { data: authResult },
+        ] = await Promise.all([
+          supabase
+            .from('reports')
+            .select('*')
+            .order('created_at', { ascending: false }),
+          supabase.from('report_categories').select('code, label_sr, description, sort_order'),
+          supabase.from('report_statuses').select('code, label_sr, description, sort_order'),
+          supabase.auth.getUser(),
+        ])
 
-        if (error) throw error
+        if (reportsError) throw reportsError
 
-        setReports(data || [])
+        setReports(reportRows || [])
+
+        if (categoryRows?.length) {
+          setCategoryLabels(buildCategoryLabelMap(sortCategories(categoryRows)))
+        }
+
+        if (statusRows?.length) {
+          setStatusLabels(buildStatusLabelMap(sortStatuses(statusRows)))
+        }
+
+        setCurrentUserId(authResult.user?.id ?? null)
+        setEngagementEnabled(!categoryError && !statusError)
       } catch (error) {
         console.error('Error fetching reports:', error)
       } finally {
@@ -140,6 +171,44 @@ export default function MapPageClient() {
       channel.unsubscribe()
     }
   }, [])
+
+  useEffect(() => {
+    if (!engagementEnabled || !currentUserId || reports.length === 0) {
+      setUpvotedReportIds(new Set())
+      return
+    }
+
+    let ignore = false
+    const supabase = createClient()
+    const reportIds = Array.from(new Set(reports.map((report) => report.id)))
+
+    const loadCurrentUserUpvotes = async () => {
+      const { data, error } = await supabase
+        .from('report_upvotes')
+        .select('report_id')
+        .eq('user_id', currentUserId)
+        .in('report_id', reportIds)
+
+      if (error) {
+        throw error
+      }
+
+      if (!ignore) {
+        setUpvotedReportIds(new Set((data ?? []).map((row) => row.report_id)))
+      }
+    }
+
+    loadCurrentUserUpvotes().catch((error) => {
+      console.error('Error loading current user upvotes:', error)
+      if (!ignore) {
+        setUpvotedReportIds(new Set())
+      }
+    })
+
+    return () => {
+      ignore = true
+    }
+  }, [currentUserId, engagementEnabled, reports])
 
   useEffect(() => {
     const supabase = createClient()
@@ -278,6 +347,63 @@ export default function MapPageClient() {
     setSelectedPlaceKey(group.key)
   }
 
+  const handleReportsViewed = (reportIds: string[]) => {
+    if (!engagementEnabled) {
+      return
+    }
+
+    const supabase = createClient()
+
+    incrementReportViews(supabase, reportIds).catch((error) => {
+      console.error('Error tracking popup report views:', error)
+    })
+  }
+
+  const handleUpvote = async (reportId: string) => {
+    if (!engagementEnabled) {
+      return
+    }
+
+    if (!currentUserId) {
+      router.push('/auth/login')
+      return
+    }
+
+    setUpvotePendingId(reportId)
+
+    try {
+      const supabase = createClient()
+      const result = await toggleReportUpvote(supabase, reportId)
+
+      setReports((currentReports) =>
+        currentReports.map((report) =>
+          report.id === reportId
+            ? {
+                ...report,
+                upvotes: result.upvotes,
+                priority: result.priority,
+              }
+            : report,
+        ),
+      )
+      setUpvotedReportIds((currentIds) => {
+        const nextIds = new Set(currentIds)
+
+        if (result.has_upvoted) {
+          nextIds.add(reportId)
+        } else {
+          nextIds.delete(reportId)
+        }
+
+        return nextIds
+      })
+    } catch (error) {
+      console.error('Error toggling report upvote:', error)
+    } finally {
+      setUpvotePendingId(null)
+    }
+  }
+
   return (
     <main className="min-h-screen bg-gray-100 py-8">
       <div className="max-w-6xl mx-auto px-4 print-shell">
@@ -353,6 +479,8 @@ export default function MapPageClient() {
               reports={selectedReports}
               selectedDistrict={selectedDistrict?.district ?? null}
               onPlaceGroupSelect={handlePlaceGroupSelect}
+              onReportsViewed={handleReportsViewed}
+              statusLabels={statusLabels}
             />
 
             {!selectedPlace && !selectedDistrict && (
@@ -397,6 +525,12 @@ export default function MapPageClient() {
             )}
 
             <div className="mt-8 bg-white rounded-lg shadow-md p-6 print-area print-card">
+              {engagementEnabled && (
+                <ReportViewsTracker
+                  trackingKey={`print:${selectedDistrictKey}:${selectedPlaceKey}`}
+                  reportIds={openReports.map((report) => report.id)}
+                />
+              )}
               <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between print-header">
                 <div>
                   <h2 className="text-2xl font-bold">Otvoreni problemi za slanje</h2>
@@ -436,8 +570,8 @@ export default function MapPageClient() {
                             <h3 className="font-bold text-lg">{report.title}</h3>
                             <p className="text-sm text-gray-600 mt-1 print-description">{report.description}</p>
                             <div className="mt-3 flex flex-wrap gap-3 print-tags">
-                              <MetadataItem type="category" label={getCategoryLabel(report.category)} />
-                              <MetadataItem type="status" label={getStatusLabel(report.status)} />
+                              <MetadataItem type="category" label={categoryLabels[report.category] ?? getCategoryLabel(report.category)} />
+                              <MetadataItem type="status" label={statusLabels[report.status] ?? getStatusLabel(report.status)} />
                             </div>
                           </div>
                           <div className="text-sm text-gray-600 md:text-right print-meta">
@@ -456,6 +590,12 @@ export default function MapPageClient() {
             </div>
 
             <div className="mt-8 bg-white rounded-lg shadow-md p-6 no-print">
+              {engagementEnabled && (
+                <ReportViewsTracker
+                  trackingKey={`grid:${selectedDistrictKey}:${selectedPlaceKey}:${reportsPage}:${reportsPerPage}`}
+                  reportIds={pagedSelectedReports.map((report) => report.id)}
+                />
+              )}
               <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                   <h2 className="text-2xl font-bold">
@@ -537,8 +677,8 @@ export default function MapPageClient() {
                       <p className="text-gray-600 text-sm mb-3">{report.description.substring(0, 100)}...</p>
 
                       <div className="flex flex-wrap gap-3 mb-3">
-                        <MetadataItem type="category" label={getCategoryLabel(report.category)} />
-                        <MetadataItem type="status" label={getStatusLabel(report.status)} />
+                        <MetadataItem type="category" label={categoryLabels[report.category] ?? getCategoryLabel(report.category)} />
+                        <MetadataItem type="status" label={statusLabels[report.status] ?? getStatusLabel(report.status)} />
                       </div>
 
                       <div className="text-sm text-gray-600 space-y-1">
@@ -546,6 +686,28 @@ export default function MapPageClient() {
                         {showMunicipalityLine && <p><strong>Opština:</strong> {location.municipality}</p>}
                         {getVisibleAuthorName(report, authorNames) && <p><strong>Autor:</strong> {getVisibleAuthorName(report, authorNames)}</p>}
                       </div>
+                      {engagementEnabled && (
+                        <div className="mt-4 flex flex-wrap items-center gap-2">
+                          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+                            Glasovi: {report.upvotes ?? 0}
+                          </span>
+                          <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
+                            Prioritet: {getPriorityLabel(report.upvotes)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleUpvote(report.id)}
+                            disabled={upvotePendingId === report.id}
+                            className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                              upvotedReportIds.has(report.id)
+                                ? 'bg-primary text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            } disabled:cursor-not-allowed disabled:opacity-50`}
+                          >
+                            {upvotePendingId === report.id ? 'Čuvanje...' : upvotedReportIds.has(report.id) ? 'Ukloni glas' : 'Podrži problem'}
+                          </button>
+                        </div>
+                      )}
                     </div>
                     )
                   })}

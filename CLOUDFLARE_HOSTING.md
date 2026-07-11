@@ -13,6 +13,46 @@ The project includes a local helper file:
 
 - .env.cloudflare.local (local only, ignored by git)
 
+## 1.1 Wrangler and Cloudflare Access
+
+There are two separate access paths in this project:
+
+- Cloudflare Pages automatic builds from GitHub
+- local/manual Cloudflare deploys through Wrangler
+
+Automatic builds from Cloudflare Pages do not use your local Wrangler session. They require:
+
+- the Cloudflare Pages project to be connected to `mmilosevic14/evorupa`
+- GitHub access authorized in Cloudflare
+- `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` available where local helper scripts or GitHub-secret sync need them
+
+Manual local deploys do require Wrangler authentication. Recommended options:
+
+1. Interactive login:
+
+```bash
+npx wrangler login
+npx wrangler whoami
+```
+
+2. API token via environment or local helper file:
+
+```bash
+CLOUDFLARE_ACCOUNT_ID=your-account-id
+CLOUDFLARE_API_TOKEN=your-api-token
+```
+
+Minimum token access for manual Pages deploys:
+
+- `Account` / `Cloudflare Pages` / `Edit`
+- `Account` / `Workers Scripts` / `Edit` if you also use the Worker fallback flow
+
+You can create the token in Cloudflare Dashboard:
+
+- `My Profile` -> `API Tokens` -> `Create Token`
+
+This repo's helper script `npm run sync:cf:secrets` reads `.env.cloudflare.local` and writes `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` into GitHub repository secrets.
+
 ## 2. One-Time Setup
 
 1. Ensure dependencies are installed:
@@ -101,7 +141,11 @@ gh auth login
 
 ### wrangler authentication issues
 
-Verify CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN secrets exist in GitHub.
+Check the right auth path for the operation you are performing:
+
+- for local deploys: run `npx wrangler whoami` and verify `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_API_TOKEN`
+- for `npm run sync:cf:secrets`: verify `.env.cloudflare.local` exists locally and `gh auth login` is already done
+- for automatic production builds: verify the Pages project is connected to `mmilosevic14/evorupa` in Cloudflare
 
 ### Build succeeds but production stays stale
 

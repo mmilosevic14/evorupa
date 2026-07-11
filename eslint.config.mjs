@@ -12,11 +12,14 @@ const compat = new FlatCompat({
 const config = [
 	{
 		ignores: [
+			'node_modules/**',
 			'.next/**',
 			'.next-build/**',
 			'.next-prod/**',
 			'.vercel/**',
 			'.open-next/**',
+			'.pages-deploy/**',
+			'.wrangler/**',
 			'out/**',
 			'build/**',
 			'coverage/**',

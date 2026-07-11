@@ -30,10 +30,14 @@ export default function MapComponent({
   reports = [],
   selectedDistrict = null,
   onPlaceGroupSelect,
+  onReportsViewed,
+  statusLabels,
 }: {
   reports?: Report[]
   selectedDistrict?: string | null
   onPlaceGroupSelect?: (group: PlaceGroup) => void
+  onReportsViewed?: (reportIds: string[]) => void
+  statusLabels?: Record<string, string>
 }) {
   const [isPopupExpanded, setIsPopupExpanded] = useState(false)
   const [isFullscreenActive, setIsFullscreenActive] = useState(false)
@@ -45,9 +49,17 @@ export default function MapComponent({
   const fullscreenButtonRef = useRef<HTMLAnchorElement | null>(null)
   const isFullscreenActiveRef = useRef(false)
 
-  const invalidateMapSize = (map: L.Map) => {
-    requestAnimationFrame(() => map.invalidateSize(false))
-    window.setTimeout(() => map.invalidateSize(false), 320)
+  const preserveMapViewport = (map: L.Map, delay = 320) => {
+    const center = map.getCenter()
+    const zoom = map.getZoom()
+
+    const restoreView = () => {
+      map.invalidateSize({ pan: false, debounceMoveend: true })
+      map.setView(center, zoom, { animate: false })
+    }
+
+    requestAnimationFrame(restoreView)
+    window.setTimeout(restoreView, delay)
   }
 
   useEffect(() => {
@@ -121,7 +133,7 @@ export default function MapComponent({
         fullscreenButtonRef.current.setAttribute('aria-label', fullscreenButtonRef.current.title)
       }
 
-      invalidateMapSize(map)
+      preserveMapViewport(map)
     }
 
     const handlePopupOpen = () => {
@@ -129,7 +141,7 @@ export default function MapComponent({
         setIsPopupExpanded(true)
       }
 
-      invalidateMapSize(map)
+      preserveMapViewport(map)
     }
 
     const handlePopupClose = () => {
@@ -137,15 +149,27 @@ export default function MapComponent({
         setIsPopupExpanded(false)
       }
 
-      invalidateMapSize(map)
+      preserveMapViewport(map)
+    }
+
+    const handleBeforePrint = () => {
+      preserveMapViewport(map, 420)
+    }
+
+    const handleAfterPrint = () => {
+      preserveMapViewport(map, 420)
     }
 
     document.addEventListener('fullscreenchange', syncFullscreenState)
+    window.addEventListener('beforeprint', handleBeforePrint)
+    window.addEventListener('afterprint', handleAfterPrint)
     map.on('popupopen', handlePopupOpen)
     map.on('popupclose', handlePopupClose)
 
     return () => {
       document.removeEventListener('fullscreenchange', syncFullscreenState)
+      window.removeEventListener('beforeprint', handleBeforePrint)
+      window.removeEventListener('afterprint', handleAfterPrint)
       map.off('popupopen', handlePopupOpen)
       map.off('popupclose', handlePopupClose)
       markersLayerRef.current?.clearLayers()
@@ -210,10 +234,13 @@ export default function MapComponent({
               />
               <h3 style="font-weight:700;margin-bottom:0.25rem;">${report.title}</h3>
               <p style="font-size:12px;color:#4b5563;margin-bottom:0.5rem;">${report.description.substring(0, 160)}...</p>
-              <p style="font-size:12px;margin-bottom:0.25rem;"><strong>Status:</strong> ${report.status}</p>
+              <p style="font-size:12px;margin-bottom:0.25rem;"><strong>Status:</strong> ${statusLabels?.[report.status] ?? report.status}</p>
               <p style="font-size:12px;"><strong>Koordinate:</strong> ${report.latitude.toFixed(5)}, ${report.longitude.toFixed(5)}</p>
             </div>
           `)
+          marker.on('popupopen', () => {
+            onReportsViewed?.([report.id])
+          })
           marker.addTo(markersLayer)
         })
 
@@ -278,7 +305,7 @@ export default function MapComponent({
                         />
                         <h4 style="font-weight:700;margin-bottom:0.25rem;">${report.title}</h4>
                         <p style="font-size:12px;color:#4b5563;margin-bottom:0.5rem;">${report.description.substring(0, 120)}...</p>
-                        <p style="font-size:12px;"><strong>Status:</strong> ${report.status}</p>
+                        <p style="font-size:12px;"><strong>Status:</strong> ${statusLabels?.[report.status] ?? report.status}</p>
                       </div>
                     `
                   })
@@ -289,6 +316,9 @@ export default function MapComponent({
           `
 
           marker.bindPopup(popupHtml)
+          marker.on('popupopen', () => {
+            onReportsViewed?.(group.reports.map((report) => report.id))
+          })
         }
         marker.addTo(markersLayer)
       })
@@ -325,7 +355,7 @@ export default function MapComponent({
     return () => {
       map.off('zoomend', handleZoomChange)
     }
-  }, [reports, selectedDistrict])
+  }, [onPlaceGroupSelect, onReportsViewed, reports, selectedDistrict, statusLabels])
 
   useEffect(() => {
     const map = mapRef.current
@@ -334,7 +364,7 @@ export default function MapComponent({
       return
     }
 
-    invalidateMapSize(map)
+    preserveMapViewport(map)
   }, [isPopupExpanded, isFullscreenActive])
 
   return (

@@ -110,6 +110,30 @@ Value: [Your Cloudflare API Token]
 6. Use "Edit Cloudflare Workers" template
 7. Create and copy the token
 
+Wrangler access note:
+
+- Cloudflare Pages automatic builds from GitHub do not depend on a local `wrangler login` session.
+- Local commands such as `npm run deploy:pages` and `npm run deploy:worker` do depend on Wrangler authentication.
+
+For local/manual deploy access, validate Wrangler before deploying:
+
+```bash
+npx wrangler login
+npx wrangler whoami
+```
+
+If you prefer token-based local access, set these values in `.env.cloudflare.local` for helper scripts and in your shell for direct Wrangler usage:
+
+```bash
+CLOUDFLARE_ACCOUNT_ID=your-account-id
+CLOUDFLARE_API_TOKEN=your-api-token
+```
+
+Recommended token permissions:
+
+- `Account` / `Cloudflare Pages` / `Edit`
+- `Account` / `Workers Scripts` / `Edit` if you use the Worker fallback deploy
+
 ### Push to GitHub
 
 ```bash
@@ -188,9 +212,12 @@ Check the build status in GitHub → Actions.
 If needed, deploy locally to Pages:
 
 ```bash
+npx wrangler whoami
 npm run build:pages
 npm run deploy:pages
 ```
+
+If `npx wrangler whoami` fails, fix Cloudflare authentication first. A successful local build alone is not enough for manual deployment.
 
 ---
 
@@ -229,8 +256,10 @@ After deployment completes:
 ### Build fails on Cloudflare
 
 - Check GitHub Actions logs
+- Check Cloudflare Pages deployment logs in the Cloudflare dashboard
 - Verify all environment variables are set
 - Run `npm run build:pages` locally to reproduce
+- Verify Cloudflare Pages is connected to `mmilosevic14/evorupa` and not an older repository slug
 
 ### Supabase not connecting
 
