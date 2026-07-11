@@ -16,6 +16,51 @@ const INDIVIDUAL_MARKER_ZOOM = 13
 const DEFAULT_MAP_HEIGHT_CLASS = 'h-96'
 const EXPANDED_MAP_HEIGHT_CLASS = 'h-[min(78vh,720px)]'
 
+function preserveMapViewport(map: L.Map, delay = 320) {
+  const center = map.getCenter()
+  const zoom = map.getZoom()
+
+  const restoreView = () => {
+    map.invalidateSize({ pan: false, debounceMoveend: true })
+    map.setView(center, zoom, { animate: false })
+  }
+
+  requestAnimationFrame(restoreView)
+  window.setTimeout(restoreView, delay)
+}
+
+function fitActiveMarkers(map: L.Map, markersLayer: L.FeatureGroup | null, delay = 320) {
+  if (!markersLayer) {
+    preserveMapViewport(map, delay)
+    return
+  }
+
+  const fitMarkers = () => {
+    map.invalidateSize({ pan: false, debounceMoveend: true })
+
+    const markerBounds = markersLayer.getBounds()
+
+    if (!markerBounds.isValid()) {
+      return
+    }
+
+    const markerCount = markersLayer.getLayers().length
+
+    if (markerCount > 1) {
+      map.fitBounds(markerBounds, {
+        padding: [32, 32],
+        animate: false,
+      })
+      return
+    }
+
+    map.setView(markerBounds.getCenter(), map.getZoom(), { animate: false })
+  }
+
+  requestAnimationFrame(fitMarkers)
+  window.setTimeout(fitMarkers, delay)
+}
+
 // Fix Leaflet marker icons
 if (typeof window !== 'undefined') {
   delete (L.Icon.Default.prototype as any)._getIconUrl
@@ -48,19 +93,6 @@ export default function MapComponent({
   const districtLayerRef = useRef<L.LayerGroup | null>(null)
   const fullscreenButtonRef = useRef<HTMLAnchorElement | null>(null)
   const isFullscreenActiveRef = useRef(false)
-
-  const preserveMapViewport = (map: L.Map, delay = 320) => {
-    const center = map.getCenter()
-    const zoom = map.getZoom()
-
-    const restoreView = () => {
-      map.invalidateSize({ pan: false, debounceMoveend: true })
-      map.setView(center, zoom, { animate: false })
-    }
-
-    requestAnimationFrame(restoreView)
-    window.setTimeout(restoreView, delay)
-  }
 
   useEffect(() => {
     const container = containerRef.current
@@ -141,7 +173,7 @@ export default function MapComponent({
         setIsPopupExpanded(true)
       }
 
-      preserveMapViewport(map)
+      fitActiveMarkers(map, markersLayerRef.current)
     }
 
     const handlePopupClose = () => {
@@ -149,7 +181,7 @@ export default function MapComponent({
         setIsPopupExpanded(false)
       }
 
-      preserveMapViewport(map)
+      fitActiveMarkers(map, markersLayerRef.current)
     }
 
     const handleBeforePrint = () => {
