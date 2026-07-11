@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@supabase/supabase-js'
+import { buildVisibleAuthorMap, getVisibleAuthorName } from '@/lib/reportAuthors'
 import { getSupabaseConfig } from '@/lib/supabaseConfig'
 import { getReportPlaceLabel, groupReportsByPlace, isOpenReport } from '@/lib/reportLocation'
 import type { Report } from '@/lib/supabase'
@@ -23,8 +24,26 @@ async function loadReports() {
   return data as Report[]
 }
 
+async function loadAuthorNames(reports: Report[]) {
+  const userIds = Array.from(new Set(reports.map((report) => report.user_id)))
+
+  if (userIds.length === 0) {
+    return new Map<string, string>()
+  }
+
+  const { url, publishableKey } = getSupabaseConfig()
+  const supabase = createClient(url, publishableKey)
+  const { data } = await supabase
+    .from('users')
+    .select('id, full_name, is_public')
+    .in('id', userIds)
+
+  return buildVisibleAuthorMap(data ?? [])
+}
+
 export default async function Home() {
   const reports = await loadReports()
+  const authorNames = await loadAuthorNames(reports)
   const openReports = reports.filter((report) => isOpenReport(report))
   const placeGroups = groupReportsByPlace(reports, 'report-count-desc')
   const featuredPlaces = placeGroups.slice(0, 6)
@@ -146,6 +165,11 @@ export default async function Home() {
                           <p className="mt-2 text-sm text-gray-500">
                             Mesto: {getReportPlaceLabel(report)}
                           </p>
+                          {getVisibleAuthorName(report, authorNames) && (
+                            <p className="mt-1 text-sm text-gray-500">
+                              Autor: {getVisibleAuthorName(report, authorNames)}
+                            </p>
+                          )}
                         </div>
                         <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
                           {report.status}
