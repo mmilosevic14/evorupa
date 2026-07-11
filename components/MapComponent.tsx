@@ -193,8 +193,9 @@ export default function MapComponent({
     const renderMarkers = () => {
       markersLayer.clearLayers()
 
+      const shouldKeepPlaceClusters = Boolean(selectedDistrict) && placeGroups.length > 1
       const shouldShowIndividualReports =
-        placeGroups.length <= 1 || map.getZoom() >= INDIVIDUAL_MARKER_ZOOM
+        placeGroups.length <= 1 || (!shouldKeepPlaceClusters && map.getZoom() >= INDIVIDUAL_MARKER_ZOOM)
 
       if (shouldShowIndividualReports) {
         reports.forEach((report) => {
