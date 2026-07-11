@@ -8,6 +8,9 @@
     "prebuild": "npm run test",
     "build": "next build",
     "build:cf": "node scripts/build-cloudflare.js",
+    "build:pages": "npm run build:cf && node scripts/prepare-pages-deploy.js",
+    "preview:cf": "npm run build:cf && npx opennextjs-cloudflare preview --config wrangler.worker.toml",
+    "preview:pages": "npm run build:pages && npx wrangler pages dev .pages-deploy",
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest run",
@@ -20,7 +23,9 @@
     "supabase:export-settlements-sql": "node scripts/export-settlements-sql.js",
     "supabase:import-settlements": "powershell -ExecutionPolicy Bypass -File scripts/import-settlements-json.ps1",
     "seed:test-serbia": "node scripts/seed-serbia-test-data.js",
-    "deploy:cf": "npm run build:cf && npx wrangler pages deploy .open-next/assets --project-name evorupa",
+    "deploy:cf": "npm run deploy:pages",
+    "deploy:pages": "npm run build:pages && npx wrangler pages deploy .pages-deploy --project-name evorupa",
+    "deploy:worker": "npm run build:cf && npx opennextjs-cloudflare deploy --config wrangler.worker.toml",
     "sync:cf:secrets": "powershell -ExecutionPolicy Bypass -File scripts/sync-cloudflare-secrets.ps1"
   },
   "dependencies": {

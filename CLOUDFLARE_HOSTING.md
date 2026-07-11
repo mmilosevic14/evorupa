@@ -1,6 +1,6 @@
-# EvoRupa - Cloudflare Pages and Workers Hosting
+# EvoRupa - Cloudflare Pages Hosting
 
-This guide explains how to build and deploy the project to Cloudflare Pages with Workers runtime support.
+This guide explains how to build and deploy the project to Cloudflare Pages in advanced mode, where Pages remains the public host and the generated OpenNext worker handles dynamic routes.
 
 ## 1. Required Secrets
 
@@ -24,7 +24,8 @@ npm install
 2. Ensure Cloudflare scripts exist in package scripts:
 
 - build:cf
-- deploy:cf
+- build:pages
+- deploy:pages
 - sync:cf:secrets
 
 3. Sync secrets to GitHub (after gh auth login):
@@ -46,6 +47,11 @@ Behavior:
 - deployment is handled by Cloudflare Pages native GitHub integration, not by GitHub Actions
 - workflow_dispatch: manual trigger
 
+CI validation target:
+
+- `npm run build:pages`
+- this must produce a `.pages-deploy` bundle with `_worker.js` for Pages advanced mode
+
 Important:
 
 - Cloudflare Pages must be connected to the active GitHub repository slug.
@@ -54,16 +60,22 @@ Important:
 
 ## 4. Local Build and Deploy
 
-Build for Cloudflare output:
+Build the Cloudflare Pages output:
 
 ```bash
-npm run build:cf
+npm run build:pages
 ```
 
-Manual deploy from local machine:
+Manual deploy to Cloudflare Pages from local machine:
 
 ```bash
-npm run deploy:cf
+npm run deploy:pages
+```
+
+Local preview of the exact Pages bundle:
+
+```bash
+npm run preview:pages
 ```
 
 ## 5. Supabase + Cloudflare Runtime Notes
@@ -96,7 +108,7 @@ Verify CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN secrets exist in GitHub.
 Check two things first:
 
 - Cloudflare Pages project is connected to `mmilosevic14/evorupa`
-- Cloudflare Pages build settings still use `npm run build:cf` and `.vercel/output/static`
+- Cloudflare Pages build settings match the current OpenNext Pages flow instead of the old `.vercel/output/static` output
 
 ### Auth works local but not in production
 
@@ -107,5 +119,5 @@ Update Supabase Auth URL configuration to include the deployed Cloudflare domain
 - [ ] GitHub secrets configured
 - [ ] Cloudflare workflow present
 - [ ] Supabase auth redirect URLs updated
-- [ ] npm run build:cf passes
+- [ ] npm run build:pages passes
 - [ ] push to main/master triggers successful deploy

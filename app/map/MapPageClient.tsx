@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic'
 import { createClient } from '@/utils/supabase/client'
 import { getReportPhotoUrl } from '@/lib/reportMedia'
 import type { Report } from '@/lib/supabase'
-import { getReportPlaceLabel, groupReportsByDistrict, groupReportsByPlace, isOpenReport, parseReportLocation } from '@/lib/reportLocation'
+import { getReportPlaceLabel, groupReportsByDistrict, groupReportsByPlace, isOpenReport, parseReportLocation, type PlaceGroup } from '@/lib/reportLocation'
 
 const MapComponent = dynamic(() => import('@/components/MapComponent'), {
   ssr: false,
@@ -230,6 +230,18 @@ export default function MapPageClient() {
     setReportsPage((currentPage) => Math.min(currentPage, totalReportPages))
   }, [totalReportPages])
 
+  const handlePlaceGroupSelect = (group: PlaceGroup) => {
+    if (selectedDistrictKey !== 'all' && group.district) {
+      const matchingDistrict = districtGroups.find((districtGroup) => districtGroup.district === group.district)
+
+      if (matchingDistrict && matchingDistrict.key !== selectedDistrictKey) {
+        setSelectedDistrictKey(matchingDistrict.key)
+      }
+    }
+
+    setSelectedPlaceKey(group.key)
+  }
+
   return (
     <main className="min-h-screen bg-gray-100 py-8">
       <div className="max-w-6xl mx-auto px-4 print-shell">
@@ -301,7 +313,11 @@ export default function MapPageClient() {
               </div>
             </div>
 
-            <MapComponent reports={selectedReports} selectedDistrict={selectedDistrict?.district ?? null} />
+            <MapComponent
+              reports={selectedReports}
+              selectedDistrict={selectedDistrict?.district ?? null}
+              onPlaceGroupSelect={handlePlaceGroupSelect}
+            />
 
             {!selectedPlace && !selectedDistrict && (
             <div className="mt-8 bg-white rounded-lg shadow-md p-6 no-print">

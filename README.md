@@ -23,7 +23,7 @@ v0.1.0 - Alpha
 - **Maps**: Leaflet (OSM) ili Mapbox
 - **PWA**: next-pwa
 - **State**: Zustand
-- **Hosting**: Cloudflare Pages + Workers
+- **Hosting**: Cloudflare Pages (advanced mode via OpenNext)
 
 ## ⚙️ Setup
 
@@ -111,7 +111,7 @@ Vidi `SETUP_DATABASE.md` za detaljnu dokumentaciju
 
 ## 🚢 Deployment
 
-### Cloudflare Pages + Workers (recommended)
+### Cloudflare Pages via OpenNext advanced mode (recommended)
 1. Dodaj secrets u GitHub repozitorijum:
 	- CLOUDFLARE_ACCOUNT_ID
 	- CLOUDFLARE_API_TOKEN
@@ -120,17 +120,30 @@ Vidi `SETUP_DATABASE.md` za detaljnu dokumentaciju
 npm run sync:cf:secrets
 ```
 3. Push na `main` ili `master` branch
-4. GitHub Actions workflow automatski radi build i deploy na Cloudflare Pages
+4. GitHub Actions workflow treba da validira build, a Cloudflare Pages Git integration ili lokalni Pages deploy objavljuje sajt
 
-Lokalni build za Cloudflare:
+Lokalni build za Cloudflare Pages:
 ```bash
-npm run build:cf
+npm run build:pages
 ```
 
-Lokalni deploy za Cloudflare:
+Lokalni preview Cloudflare Pages build-a:
 ```bash
-npm run deploy:cf
+npm run preview:pages
 ```
+
+Lokalni deploy za Cloudflare Pages:
+```bash
+npm run deploy:pages
+```
+
+Direktan Workers deploy ostaje kao fallback:
+```bash
+npm run deploy:worker
+```
+
+Napomena:
+Cloudflare Pages ostaje primarni hosting model. OpenNext i dalje generiše `_worker.js` zato što aplikacija ima dinamičke rute, ali se taj worker objavljuje kroz Pages advanced mode, ne kao zaseban Workers-only proizvod.
 
 ### Vercel
 ```bash
