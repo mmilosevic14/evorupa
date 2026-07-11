@@ -3,6 +3,7 @@
 import L from 'leaflet'
 import { useEffect, useRef, useState } from 'react'
 import { getReportPhotoUrl } from '@/lib/reportMedia'
+import type { PlaceGroup } from '@/lib/reportLocation'
 import type { Report } from '@/lib/supabase'
 import { groupReportsByPlace } from '@/lib/reportLocation'
 import { SERBIA_DISTRICT_BOUNDARIES } from '@/lib/serbiaDistricts'
@@ -25,7 +26,15 @@ if (typeof window !== 'undefined') {
   })
 }
 
-export default function MapComponent({ reports = [], selectedDistrict = null }: { reports?: Report[]; selectedDistrict?: string | null }) {
+export default function MapComponent({
+  reports = [],
+  selectedDistrict = null,
+  onPlaceGroupSelect,
+}: {
+  reports?: Report[]
+  selectedDistrict?: string | null
+  onPlaceGroupSelect?: (group: PlaceGroup) => void
+}) {
   const [isPopupExpanded, setIsPopupExpanded] = useState(false)
   const [isFullscreenActive, setIsFullscreenActive] = useState(false)
   const shellRef = useRef<HTMLDivElement | null>(null)
@@ -184,8 +193,9 @@ export default function MapComponent({ reports = [], selectedDistrict = null }: 
     const renderMarkers = () => {
       markersLayer.clearLayers()
 
+      const shouldKeepPlaceClusters = Boolean(selectedDistrict) && placeGroups.length > 1
       const shouldShowIndividualReports =
-        placeGroups.length <= 1 || map.getZoom() >= INDIVIDUAL_MARKER_ZOOM
+        placeGroups.length <= 1 || (!shouldKeepPlaceClusters && map.getZoom() >= INDIVIDUAL_MARKER_ZOOM)
 
       if (shouldShowIndividualReports) {
         reports.forEach((report) => {
@@ -236,37 +246,50 @@ export default function MapComponent({ reports = [], selectedDistrict = null }: 
             iconAnchor: [22, 22],
           }),
         })
-        const popupHtml = `
-          <div class="text-sm" style="min-width:280px;max-width:320px;">
-            <h3 class="font-bold text-base" style="margin-bottom:0.25rem;">${group.label}</h3>
-            ${group.municipality ? `<p class="text-xs text-gray-600" style="margin-bottom:0.25rem;">Opština/grad: ${group.municipality}</p>` : ''}
-            ${group.district ? `<p class="text-xs text-gray-600" style="margin-bottom:0.5rem;">Okrug: ${group.district}</p>` : ''}
-            <p class="text-xs" style="margin-bottom:0.75rem;">Ukupno prijava: <strong>${group.reportCount}</strong> | Otvoreno: <strong>${group.openCount}</strong></p>
-            <div style="display:flex;flex-direction:column;gap:0.75rem;max-height:320px;overflow:auto;">
-              ${group.reports
-                .map((report) => {
-                  const photoUrl = getReportPhotoUrl(report.photo_url)
+        if (onPlaceGroupSelect) {
+          marker.on('click', () => {
+            onPlaceGroupSelect(group)
+          })
+          marker.bindTooltip(
+            `${group.label} (${group.reportCount})${group.district ? ` - ${group.district}` : ''}`,
+            {
+              direction: 'top',
+              offset: [0, -18],
+            },
+          )
+        } else {
+          const popupHtml = `
+            <div class="text-sm" style="min-width:280px;max-width:320px;">
+              <h3 class="font-bold text-base" style="margin-bottom:0.25rem;">${group.label}</h3>
+              ${group.municipality ? `<p class="text-xs text-gray-600" style="margin-bottom:0.25rem;">Opština/grad: ${group.municipality}</p>` : ''}
+              ${group.district ? `<p class="text-xs text-gray-600" style="margin-bottom:0.5rem;">Okrug: ${group.district}</p>` : ''}
+              <p class="text-xs" style="margin-bottom:0.75rem;">Ukupno prijava: <strong>${group.reportCount}</strong> | Otvoreno: <strong>${group.openCount}</strong></p>
+              <div style="display:flex;flex-direction:column;gap:0.75rem;max-height:320px;overflow:auto;">
+                ${group.reports
+                  .map((report) => {
+                    const photoUrl = getReportPhotoUrl(report.photo_url)
 
-                  return `
-                    <div style="border-top:1px solid #e5e7eb;padding-top:0.75rem;">
-                      <img
-                        src="${photoUrl}"
-                        alt="${report.title}"
-                        style="width:100%;height:128px;object-fit:cover;border-radius:0.5rem;margin-bottom:0.5rem;background:#f3f4f6;"
-                      />
-                      <h4 style="font-weight:700;margin-bottom:0.25rem;">${report.title}</h4>
-                      <p style="font-size:12px;color:#4b5563;margin-bottom:0.5rem;">${report.description.substring(0, 120)}...</p>
-                      <p style="font-size:12px;"><strong>Status:</strong> ${report.status}</p>
-                    </div>
-                  `
-                })
-                .join('')}
+                    return `
+                      <div style="border-top:1px solid #e5e7eb;padding-top:0.75rem;">
+                        <img
+                          src="${photoUrl}"
+                          alt="${report.title}"
+                          style="width:100%;height:128px;object-fit:cover;border-radius:0.5rem;margin-bottom:0.5rem;background:#f3f4f6;"
+                        />
+                        <h4 style="font-weight:700;margin-bottom:0.25rem;">${report.title}</h4>
+                        <p style="font-size:12px;color:#4b5563;margin-bottom:0.5rem;">${report.description.substring(0, 120)}...</p>
+                        <p style="font-size:12px;"><strong>Status:</strong> ${report.status}</p>
+                      </div>
+                    `
+                  })
+                  .join('')}
+              </div>
+              ${unresolvedReports.length === 0 ? '<p style="margin-top:0.75rem;font-size:12px;color:#16a34a;">Nema otvorenih problema u ovom mestu.</p>' : ''}
             </div>
-            ${unresolvedReports.length === 0 ? '<p style="margin-top:0.75rem;font-size:12px;color:#16a34a;">Nema otvorenih problema u ovom mestu.</p>' : ''}
-          </div>
-        `
+          `
 
-        marker.bindPopup(popupHtml)
+          marker.bindPopup(popupHtml)
+        }
         marker.addTo(markersLayer)
       })
     }

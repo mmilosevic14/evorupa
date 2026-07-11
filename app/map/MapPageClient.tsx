@@ -3,10 +3,11 @@
 import Image from 'next/image'
 import { useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
+import { buildVisibleAuthorMap, getVisibleAuthorName } from '@/lib/reportAuthors'
 import { createClient } from '@/utils/supabase/client'
 import { getReportPhotoUrl } from '@/lib/reportMedia'
-import type { Report } from '@/lib/supabase'
-import { getReportPlaceLabel, groupReportsByDistrict, groupReportsByPlace, isOpenReport, parseReportLocation } from '@/lib/reportLocation'
+import type { Database, Report } from '@/lib/supabase'
+import { getReportPlaceLabel, groupReportsByDistrict, groupReportsByPlace, isOpenReport, parseReportLocation, type PlaceGroup } from '@/lib/reportLocation'
 
 const MapComponent = dynamic(() => import('@/components/MapComponent'), {
   ssr: false,
@@ -85,6 +86,7 @@ function MetadataItem({ type, label }: { type: 'category' | 'status' | 'location
 
 export default function MapPageClient() {
   const [reports, setReports] = useState<Report[]>([])
+  const [authorNames, setAuthorNames] = useState<Map<string, string>>(new Map())
   const [loading, setLoading] = useState(true)
   const [selectedDistrictKey, setSelectedDistrictKey] = useState('all')
   const [selectedPlaceKey, setSelectedPlaceKey] = useState('all')
@@ -138,6 +140,40 @@ export default function MapPageClient() {
       channel.unsubscribe()
     }
   }, [])
+
+  useEffect(() => {
+    const supabase = createClient()
+    const userIds = Array.from(new Set(reports.map((report) => report.user_id)))
+
+    if (userIds.length === 0) {
+      setAuthorNames(new Map())
+      return
+    }
+
+    let ignore = false
+
+    const loadAuthors = async () => {
+      const { data } = await supabase
+        .from('users')
+        .select('id, full_name, is_public')
+        .in('id', userIds)
+
+      if (!ignore) {
+        setAuthorNames(buildVisibleAuthorMap((data ?? []) as Pick<Database['public']['Tables']['users']['Row'], 'id' | 'full_name' | 'is_public'>[]))
+      }
+    }
+
+    loadAuthors().catch((authorError) => {
+      console.error('Error fetching report authors:', authorError)
+      if (!ignore) {
+        setAuthorNames(new Map())
+      }
+    })
+
+    return () => {
+      ignore = true
+    }
+  }, [reports])
 
   const districtGroups = useMemo(
     () => groupReportsByDistrict(reports, 'name-asc'),
@@ -230,6 +266,18 @@ export default function MapPageClient() {
     setReportsPage((currentPage) => Math.min(currentPage, totalReportPages))
   }, [totalReportPages])
 
+  const handlePlaceGroupSelect = (group: PlaceGroup) => {
+    if (selectedDistrictKey !== 'all' && group.district) {
+      const matchingDistrict = districtGroups.find((districtGroup) => districtGroup.district === group.district)
+
+      if (matchingDistrict && matchingDistrict.key !== selectedDistrictKey) {
+        setSelectedDistrictKey(matchingDistrict.key)
+      }
+    }
+
+    setSelectedPlaceKey(group.key)
+  }
+
   return (
     <main className="min-h-screen bg-gray-100 py-8">
       <div className="max-w-6xl mx-auto px-4 print-shell">
@@ -301,7 +349,11 @@ export default function MapPageClient() {
               </div>
             </div>
 
-            <MapComponent reports={selectedReports} selectedDistrict={selectedDistrict?.district ?? null} />
+            <MapComponent
+              reports={selectedReports}
+              selectedDistrict={selectedDistrict?.district ?? null}
+              onPlaceGroupSelect={handlePlaceGroupSelect}
+            />
 
             {!selectedPlace && !selectedDistrict && (
             <div className="mt-8 bg-white rounded-lg shadow-md p-6 no-print">
@@ -392,6 +444,7 @@ export default function MapPageClient() {
                             {showPlaceLine && <p><strong>Mesto:</strong> {getReportPlaceLabel(report)}</p>}
                             {showMunicipalityLine && <p><strong>Opština:</strong> {location.municipality}</p>}
                             {showDistrictLine && <p><strong>Okrug:</strong> {location.district}</p>}
+                            {getVisibleAuthorName(report, authorNames) && <p><strong>Autor:</strong> {getVisibleAuthorName(report, authorNames)}</p>}
                             <p className="inline-flex items-center gap-1.5"><MetadataIcon type="location" /><span><strong>Koordinate:</strong> {report.latitude.toFixed(4)}, {report.longitude.toFixed(4)}</span></p>
                           </div>
                         </div>
@@ -491,6 +544,7 @@ export default function MapPageClient() {
                       <div className="text-sm text-gray-600 space-y-1">
                         {showPlaceLine && <p><strong>Mesto:</strong> {getReportPlaceLabel(report)}</p>}
                         {showMunicipalityLine && <p><strong>Opština:</strong> {location.municipality}</p>}
+                        {getVisibleAuthorName(report, authorNames) && <p><strong>Autor:</strong> {getVisibleAuthorName(report, authorNames)}</p>}
                       </div>
                     </div>
                     )

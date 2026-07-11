@@ -1,6 +1,5 @@
 import Link from 'next/link'
 
-
 export default function NotFound() {
   return (
     <main className="min-h-screen bg-gray-50 text-gray-900">

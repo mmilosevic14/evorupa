@@ -11,6 +11,10 @@ export default function LoginPageClient() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  const getAuthRedirectUrl = () => {
+    return `${window.location.origin}/auth/callback?next=/map`
+  }
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -33,6 +37,29 @@ export default function LoginPageClient() {
       }
     } catch {
       setError('Greška pri login-u')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleGoogleLogin = async () => {
+    setError('')
+    setLoading(true)
+
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: getAuthRedirectUrl(),
+        },
+      })
+
+      if (error) {
+        setError(error.message)
+      }
+    } catch {
+      setError('Greška pri pokretanju Google prijave')
     } finally {
       setLoading(false)
     }
@@ -88,6 +115,21 @@ export default function LoginPageClient() {
             {loading ? 'Učitavanje...' : 'Uloguj se'}
           </button>
         </form>
+
+        <div className="my-4 flex items-center gap-3">
+          <div className="h-px flex-1 bg-gray-200" />
+          <span className="text-xs uppercase tracking-wide text-gray-500">ili</span>
+          <div className="h-px flex-1 bg-gray-200" />
+        </div>
+
+        <button
+          type="button"
+          onClick={handleGoogleLogin}
+          disabled={loading}
+          className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+        >
+          Nastavi sa Google
+        </button>
 
         <div className="mt-4 text-center text-gray-600">
           Nemaš nalog?{' '}

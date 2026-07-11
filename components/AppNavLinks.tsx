@@ -2,28 +2,34 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 import { createClient } from '@/utils/supabase/client'
 
 type AdminState = {
   isAdmin: boolean
+  isAuthenticated: boolean
 }
 
 export default function AppNavLinks() {
-  const [adminState, setAdminState] = useState<AdminState>({ isAdmin: false })
+  const router = useRouter()
+  const [adminState, setAdminState] = useState<AdminState>({
+    isAdmin: false,
+    isAuthenticated: false,
+  })
 
   useEffect(() => {
     let isMounted = true
+    const supabase = createClient()
 
     async function loadAdminState() {
-      const supabase = createClient()
       const {
         data: { user },
       } = await supabase.auth.getUser()
 
       if (!user) {
         if (isMounted) {
-          setAdminState({ isAdmin: false })
+          setAdminState({ isAdmin: false, isAuthenticated: false })
         }
         return
       }
@@ -42,20 +48,38 @@ export default function AppNavLinks() {
       )
 
       if (isMounted) {
-        setAdminState({ isAdmin })
+        setAdminState({ isAdmin, isAuthenticated: true })
       }
     }
 
     loadAdminState().catch(() => {
       if (isMounted) {
-        setAdminState({ isAdmin: false })
+        setAdminState({ isAdmin: false, isAuthenticated: false })
       }
+    })
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(() => {
+      loadAdminState().catch(() => {
+        if (isMounted) {
+          setAdminState({ isAdmin: false, isAuthenticated: false })
+        }
+      })
     })
 
     return () => {
       isMounted = false
+      subscription.unsubscribe()
     }
   }, [])
+
+  const handleLogout = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/auth/login')
+    router.refresh()
+  }
 
   return (
     <div className="space-x-4">
@@ -65,9 +89,27 @@ export default function AppNavLinks() {
       <Link href="/report" className="hover:text-blue-100 transition">
         Prijavi problem
       </Link>
+      {adminState.isAuthenticated && (
+        <Link href="/account" className="hover:text-blue-100 transition">
+          Moj profil
+        </Link>
+      )}
       {adminState.isAdmin && (
         <Link href="/admin" className="hover:text-blue-100 transition">
           Admin
+        </Link>
+      )}
+      {adminState.isAuthenticated ? (
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="hover:text-blue-100 transition"
+        >
+          Odjavi se
+        </button>
+      ) : (
+        <Link href="/auth/login" className="hover:text-blue-100 transition">
+          Uloguj se
         </Link>
       )}
     </div>

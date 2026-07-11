@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   build:
-    name: Build Next.js for Cloudflare
+    name: Validate Cloudflare Pages build
     runs-on: ubuntu-latest
 
     steps:
@@ -38,9 +38,12 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Build for Cloudflare
-        run: npm run build:cf
+      - name: Test
+        run: npm run test
+
+      - name: Build for Cloudflare Pages
+        run: npm run build:pages
 
   # Deployment is handled by Cloudflare Pages' native GitHub integration
   # Connect your repo in Cloudflare Pages dashboard: https://dash.cloudflare.com/pages
-  # Build settings: Framework=Next.js, Build command=npm run build:cf, Output=.vercel/output/static
+  # Build settings: Framework=Next.js, Build command=npm run build:pages, Output=.pages-deploy

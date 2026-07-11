@@ -132,8 +132,8 @@ git push origin main
 6. Select your `evorupa` repository
 7. Configure build settings:
    - **Framework preset**: Next.js
-   - **Build command**: `npm run build:cf`
-   - **Build output directory**: `.vercel/output/static`
+   - **Build command**: `npm run build:pages`
+   - **Build output directory**: `.pages-deploy`
 
 ### Set Environment Variables in Cloudflare
 
@@ -171,7 +171,8 @@ The CI/CD pipeline will:
 1. Install dependencies
 2. Run type checks
 3. Run linting
-4. Build for Cloudflare
+4. Run tests
+5. Build the Pages advanced-mode bundle
 
 Deployment note:
 
@@ -184,11 +185,11 @@ Check the build status in GitHub → Actions.
 
 ### Manual Deployment
 
-If needed, deploy locally:
+If needed, deploy locally to Pages:
 
 ```bash
-npm run build:cf
-npm run deploy:cf
+npm run build:pages
+npm run deploy:pages
 ```
 
 ---
@@ -229,7 +230,7 @@ After deployment completes:
 
 - Check GitHub Actions logs
 - Verify all environment variables are set
-- Run `npm run build:cf` locally to reproduce
+- Run `npm run build:pages` locally to reproduce
 
 ### Supabase not connecting
 

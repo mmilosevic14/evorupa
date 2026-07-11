@@ -9,7 +9,6 @@ import {
   type SerbiaSettlement,
 } from '@/lib/serbiaGeo'
 
-
 function firstString(...values: Array<string | undefined>) {
   return values.find((value) => typeof value === 'string' && value.trim().length > 0)?.trim() ?? ''
 }
