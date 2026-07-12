@@ -32,6 +32,8 @@ npm ci
 
 CI currently uses Node 22. Do not upgrade the expected Node version as part of unrelated changes. If upgrading Node, first keep CI green on Node 22, then make the migration explicit in a separate change.
 
+For dependency and Node migration sequencing, follow `UPGRADE_MIGRATION_PLAN.md`.
+
 ## Local Env Files
 
 Expected local files:
