@@ -6,9 +6,14 @@ import AppNavLinks from '@/components/AppNavLinks'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://evorupa.rs'),
-  title: "EvoRupa - Prijavi probleme u infrastrukturi",
-  description: "EvoRupa je aplikacija za prijavu rupa, oštećenja puta i drugih infrastrukturnih problema u Srbiji i Evropi.",
+  title: {
+    default: 'EvoRupa - Prijavi rupe i infrastrukturne probleme',
+    template: '%s | EvoRupa',
+  },
+  description: 'EvoRupa je građanska platforma za prijavu rupa, oštećenja puta i drugih infrastrukturnih problema u Srbiji.',
   applicationName: 'EvoRupa',
+  generator: 'Next.js',
+  referrer: 'origin-when-cross-origin',
   keywords: [
     'EvoRupa',
     'EvoJeRupa',
@@ -20,17 +25,45 @@ export const metadata: Metadata = {
     'prijava problema na putu',
     'infrastruktura Srbije',
   ],
+  authors: [{ name: 'EvoRupa' }],
+  creator: 'EvoRupa',
+  publisher: 'EvoRupa',
+  category: 'civic technology',
+  alternates: {
+    canonical: '/',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+      'max-video-preview': -1,
+    },
+  },
   openGraph: {
-    title: 'EvoRupa - Prijavi probleme u infrastrukturi',
-    description: 'EvoRupa pomaže građanima da prijave rupe, oštećenja puta i druge infrastrukturne probleme.',
+    title: 'EvoRupa - Prijavi rupe i infrastrukturne probleme',
+    description: 'Prijavi rupe, oštećenja puta i druge probleme na infrastrukturi. Pogledaj prijave građana na mapi Srbije.',
+    url: '/',
     siteName: 'EvoRupa',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'EvoRupa - građanska mapa infrastrukturnih problema',
+      },
+    ],
     locale: 'sr_RS',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'EvoRupa - Prijavi probleme u infrastrukturi',
-    description: 'Pronađi i prijavi rupe i druge infrastrukturne probleme uz EvoRupa.',
+    title: 'EvoRupa - Prijavi rupe i infrastrukturne probleme',
+    description: 'Građanska mapa rupa, oštećenja puta i infrastrukturnih problema u Srbiji.',
+    images: ['/og-image.png'],
   },
 };
 

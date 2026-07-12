@@ -17,6 +17,7 @@
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "type-check": "tsc --noEmit",
+    "generate:og": "node scripts/generate-og-image.js",
     "supabase:apply-schema": "powershell -ExecutionPolicy Bypass -File scripts/apply-supabase-schema.ps1",
     "supabase:apply-settlements": "powershell -ExecutionPolicy Bypass -File scripts/apply-serbia-settlements.ps1",
     "supabase:build-settlements": "powershell -ExecutionPolicy Bypass -File scripts/build-serbia-settlements.ps1",

@@ -36,13 +36,8 @@
   "categories": ["productivity", "utilities"],
   "screenshots": [
     {
-      "src": "/screenshots/map.png",
-      "sizes": "540x720",
-      "type": "image/png"
-    },
-    {
-      "src": "/screenshots/report.png",
-      "sizes": "540x720",
+      "src": "/screenshots/home.png",
+      "sizes": "1280x720",
       "type": "image/png"
     }
   ],
