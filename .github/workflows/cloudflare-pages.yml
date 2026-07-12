@@ -44,6 +44,16 @@ jobs:
       - name: Build for Cloudflare Pages
         run: npm run build:pages
 
-  # Deployment is handled by Cloudflare Pages' native GitHub integration
-  # Connect your repo in Cloudflare Pages dashboard: https://dash.cloudflare.com/pages
-  # Build settings: Framework=Next.js, Build command=npm run build:pages, Output=.pages-deploy
+      - name: Deploy to Cloudflare Pages
+        if: github.event_name == 'push'
+        run: npx wrangler pages deploy .pages-deploy --project-name evorupa --branch "${{ github.ref_name }}" --commit-hash "${{ github.sha }}"
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+
+  # GitHub Actions is the source of truth for validation and deployment.
+  # Cloudflare Pages' native GitHub deployments are disabled because they can
+  # fail before clone/build initialization while Wrangler deploys the verified
+  # .pages-deploy artifact deterministically.
