@@ -494,14 +494,23 @@ export default function MapComponent({
       return
     }
 
-    const marker = reportMarkersRef.current.get(focusedReportId)
+    const openFocusedMarkerPopup = () => {
+      const marker = reportMarkersRef.current.get(focusedReportId)
 
-    if (!marker) {
-      return
+      if (!marker) {
+        return
+      }
+
+      isSwitchingPopupRef.current = true
+      marker.openPopup()
     }
 
-    isSwitchingPopupRef.current = true
-    marker.openPopup()
+    requestAnimationFrame(openFocusedMarkerPopup)
+    const retryAfterFitTimeout = window.setTimeout(openFocusedMarkerPopup, 420)
+
+    return () => {
+      window.clearTimeout(retryAfterFitTimeout)
+    }
   }, [focusedReportId, focusedReportNonce, reports])
 
   useEffect(() => {
