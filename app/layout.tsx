@@ -5,7 +5,7 @@ import Link from "next/link";
 import AppNavLinks from '@/components/AppNavLinks'
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://evorupa.rs'),
+  metadataBase: new URL('https://evorupa.pages.dev'),
   title: {
     default: 'EvoRupa - Prijavi rupe i infrastrukturne probleme',
     template: '%s | EvoRupa',
@@ -82,7 +82,7 @@ export default function RootLayout({
   return (
     <html lang="sr">
       <head>
-        <meta property="og:logo" content="https://evorupa.rs/logo.png" />
+        <meta property="og:logo" content="https://evorupa.pages.dev/logo.png" />
       </head>
       <body className="antialiased">
         <nav className="bg-secondary text-white shadow-lg">

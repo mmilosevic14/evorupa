@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next'
 
-const siteUrl = 'https://evorupa.rs'
+const siteUrl = 'https://evorupa.pages.dev'
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const routes = ['', '/map', '/report', '/auth/login', '/auth/signup']
