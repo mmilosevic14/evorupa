@@ -77,41 +77,16 @@ fs.mkdirSync(path.dirname(outputPath), { recursive: true })
 function logoSvg(size) {
   const center = size / 2
   const outerRadius = size * 0.46
+  const ringWidth = outerRadius / 3
+  const blueRadius = outerRadius - ringWidth
+  const whiteRadius = outerRadius - ringWidth * 2
 
   return `
   <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <radialGradient id="blue" cx="34%" cy="28%" r="70%">
-        <stop stop-color="#38BDF8"/>
-        <stop offset="0.55" stop-color="#2563EB"/>
-        <stop offset="1" stop-color="#1E3A8A"/>
-      </radialGradient>
-      <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
-        <feDropShadow dx="0" dy="${size * 0.025}" stdDeviation="${size * 0.025}" flood-color="#0F172A" flood-opacity="0.28"/>
-      </filter>
-    </defs>
     <rect width="${size}" height="${size}" fill="none"/>
-    <circle cx="${center}" cy="${center}" r="${outerRadius}" fill="url(#blue)" filter="url(#softShadow)"/>
-    <path
-      d="
-        M ${size * 0.36} ${size * 0.43}
-        C ${size * 0.45} ${size * 0.31}, ${size * 0.63} ${size * 0.34}, ${size * 0.68} ${size * 0.47}
-        C ${size * 0.74} ${size * 0.62}, ${size * 0.61} ${size * 0.75}, ${size * 0.47} ${size * 0.71}
-        C ${size * 0.34} ${size * 0.67}, ${size * 0.27} ${size * 0.55}, ${size * 0.36} ${size * 0.43}
-        Z"
-      fill="#FFFFFF"
-      stroke="#DC2626"
-      stroke-width="${Math.max(5, size * 0.075)}"
-      stroke-linejoin="round"
-    />
-    <path
-      d="M ${size * 0.43} ${size * 0.48} C ${size * 0.49} ${size * 0.42}, ${size * 0.58} ${size * 0.44}, ${size * 0.61} ${size * 0.51}"
-      fill="none"
-      stroke="#FCA5A5"
-      stroke-width="${Math.max(2, size * 0.025)}"
-      stroke-linecap="round"
-      opacity="0.75"
-    />
+    <circle cx="${center}" cy="${center}" r="${outerRadius}" fill="#DC2626"/>
+    <circle cx="${center}" cy="${center}" r="${blueRadius}" fill="#2563EB"/>
+    <circle cx="${center}" cy="${center}" r="${whiteRadius}" fill="#FFFFFF"/>
   </svg>
   `
 }
