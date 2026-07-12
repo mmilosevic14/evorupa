@@ -114,11 +114,29 @@ jobs:
             throw new Error(`Cloudflare deployment for ${expectedSha} did not become successful`)
           }
 
-          for (const url of [deployment.url, 'https://evorupa.pages.dev']) {
-            const response = await fetch(url)
-            if (!response.ok) {
-              throw new Error(`${url} returned HTTP ${response.status}`)
+          async function fetchOkWithRetry(url) {
+            let lastStatus = 'no response'
+
+            for (let attempt = 1; attempt <= 12; attempt += 1) {
+              try {
+                const response = await fetch(url)
+                lastStatus = `HTTP ${response.status}`
+
+                if (response.ok) {
+                  return response
+                }
+              } catch (error) {
+                lastStatus = error instanceof Error ? error.message : String(error)
+              }
+
+              await sleep(5000)
             }
+
+            throw new Error(`${url} was not reachable after retries: ${lastStatus}`)
+          }
+
+          for (const url of [deployment.url, 'https://evorupa.pages.dev']) {
+            await fetchOkWithRetry(url)
           }
 
           const reportsResponse = await fetch(`${supabaseUrl}/rest/v1/reports?select=id&limit=1`, {
@@ -140,7 +158,7 @@ jobs:
             throw new Error(`Supabase reports smoke returned invalid count: ${contentRange}`)
           }
 
-          const homeResponse = await fetch('https://evorupa.pages.dev')
+          const homeResponse = await fetchOkWithRetry('https://evorupa.pages.dev')
           const homeHtml = await homeResponse.text()
           const renderedCount = Number(
             homeHtml.match(/Ukupno prijava<\/p><p[^>]*>(\d+)/)?.[1] ?? 0,
