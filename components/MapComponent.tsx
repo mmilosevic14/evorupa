@@ -68,19 +68,17 @@ function fitActiveMarkers(map: L.Map, markersLayer: L.FeatureGroup | null, delay
 
 function ensurePopupVisible(map: L.Map, popup: L.Popup, delay = 320) {
   const panPopupIntoView = () => {
-    const popupLatLng = popup.getLatLng()
-
-    if (!popupLatLng) {
-      return
-    }
-
     map.invalidateSize({ pan: false, debounceMoveend: true })
     popup.update()
-    map.panInside(popupLatLng, {
-      paddingTopLeft: [24, 24],
-      paddingBottomRight: [24, 140],
-      ...MAP_VIEW_ANIMATION,
-    })
+
+    const popupWithAdjustPan = popup as L.Popup & {
+      _adjustPan?: () => void
+    }
+
+    popupWithAdjustPan.options.keepInView = true
+    popupWithAdjustPan.options.autoPanPaddingTopLeft = L.point(24, 24)
+    popupWithAdjustPan.options.autoPanPaddingBottomRight = L.point(24, 140)
+    popupWithAdjustPan._adjustPan?.()
   }
 
   requestAnimationFrame(panPopupIntoView)
