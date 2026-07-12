@@ -104,6 +104,7 @@ export default function MapPageClient() {
   const [reportsPage, setReportsPage] = useState(1)
   const [reportsPerPage, setReportsPerPage] = useState<number | 'all'>(REPORTS_PAGE_SIZE)
   const mapSectionRef = useRef<HTMLDivElement | null>(null)
+  const skipPlaceResetRef = useRef(false)
 
   useEffect(() => {
     const supabase = createClient()
@@ -326,6 +327,11 @@ export default function MapPageClient() {
   }, [reportsPage, reportsPerPage, selectedReports.length])
 
   useEffect(() => {
+    if (skipPlaceResetRef.current) {
+      skipPlaceResetRef.current = false
+      return
+    }
+
     setSelectedPlaceKey('all')
   }, [selectedDistrictKey])
 
@@ -350,10 +356,13 @@ export default function MapPageClient() {
   }
 
   const handleReportFocus = (report: Report) => {
-    const matchingDistrict = districtGroups.find((group) => group.reports.some((groupReport) => groupReport.id === report.id))
-    const matchingPlace = placeDropdownGroups.find((group) => group.reports.some((groupReport) => groupReport.id === report.id))
+    const allDistrictGroups = groupReportsByDistrict(reports, 'name-asc')
+    const allPlaceGroups = groupReportsByPlace(reports, 'name-asc')
+    const matchingDistrict = allDistrictGroups.find((group) => group.reports.some((groupReport) => groupReport.id === report.id))
+    const matchingPlace = allPlaceGroups.find((group) => group.reports.some((groupReport) => groupReport.id === report.id))
 
     if (matchingDistrict) {
+      skipPlaceResetRef.current = true
       setSelectedDistrictKey(matchingDistrict.key)
     }
 

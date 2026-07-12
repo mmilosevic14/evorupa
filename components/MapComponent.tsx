@@ -21,12 +21,21 @@ const MAP_VIEW_ANIMATION = {
   easeLinearity: 0.2,
 }
 
+function invalidateMapSize(map: L.Map, delay = 320) {
+  const syncSize = () => {
+    map.invalidateSize({ pan: false, debounceMoveend: true })
+  }
+
+  requestAnimationFrame(syncSize)
+  window.setTimeout(syncSize, delay)
+}
+
 function preserveMapViewport(map: L.Map, delay = 320) {
   const center = map.getCenter()
   const zoom = map.getZoom()
 
   const restoreView = () => {
-    map.invalidateSize({ pan: false, debounceMoveend: true })
+    invalidateMapSize(map, 0)
     map.setView(center, zoom, MAP_VIEW_ANIMATION)
   }
 
@@ -41,7 +50,7 @@ function fitActiveMarkers(map: L.Map, markersLayer: L.FeatureGroup | null, delay
   }
 
   const fitMarkers = () => {
-    map.invalidateSize({ pan: false, debounceMoveend: true })
+    invalidateMapSize(map, 0)
 
     const markerBounds = markersLayer.getBounds()
 
@@ -73,7 +82,7 @@ function ensureActiveMarkersVisible(map: L.Map, markersLayer: L.FeatureGroup | n
   }
 
   const fitMarkersIfNeeded = () => {
-    map.invalidateSize({ pan: false, debounceMoveend: true })
+    invalidateMapSize(map, 0)
 
     const markerBounds = markersLayer.getBounds()
 
@@ -99,7 +108,7 @@ function ensureActiveMarkersVisible(map: L.Map, markersLayer: L.FeatureGroup | n
 
 function ensurePopupVisible(map: L.Map, popup: L.Popup, delay = 320) {
   const panPopupIntoView = () => {
-    map.invalidateSize({ pan: false, debounceMoveend: true })
+    invalidateMapSize(map, 0)
     popup.update()
 
     const popupWithAdjustPan = popup as L.Popup & {
@@ -483,7 +492,7 @@ export default function MapComponent({
     isSwitchingPopupRef.current = true
     marker.openPopup()
     ensurePopupVisible(map, marker.getPopup() ?? new L.Popup(), isFullscreenActiveRef.current ? 180 : 320)
-  }, [focusedReportId, focusedReportNonce])
+  }, [focusedReportId, focusedReportNonce, reports])
 
   useEffect(() => {
     const map = mapRef.current
@@ -493,7 +502,17 @@ export default function MapComponent({
     }
 
     preserveMapViewport(map)
-  }, [isPopupExpanded, isFullscreenActive])
+  }, [isFullscreenActive])
+
+  useEffect(() => {
+    const map = mapRef.current
+
+    if (!map) {
+      return
+    }
+
+    invalidateMapSize(map)
+  }, [isPopupExpanded])
 
   return (
     <div
