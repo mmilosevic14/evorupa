@@ -1,8 +1,8 @@
 'use client'
 
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import ReportViewsTracker from '@/components/ReportViewsTracker'
 import { incrementReportViews, toggleReportUpvote } from '@/lib/reportEngagement'
@@ -89,6 +89,7 @@ function MetadataItem({ type, label }: { type: 'category' | 'status' | 'location
 
 export default function MapPageClient() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [reports, setReports] = useState<Report[]>([])
   const [authorNames, setAuthorNames] = useState<Map<string, string>>(new Map())
   const [categoryLabels, setCategoryLabels] = useState<Record<string, string>>(() => buildCategoryLabelMap())
@@ -112,6 +113,8 @@ export default function MapPageClient() {
   const mapSectionRef = useRef<HTMLDivElement | null>(null)
   const skipPlaceResetRef = useRef(false)
   const pendingFocusRequestRef = useRef(pendingFocusRequest)
+  const handledQueryReportIdRef = useRef<string | null>(null)
+  const handleReportFocusRef = useRef<(report: Report) => void>(() => {})
 
   useEffect(() => {
     pendingFocusRequestRef.current = pendingFocusRequest
@@ -391,7 +394,7 @@ export default function MapPageClient() {
     setSelectedPlaceKey(group.key)
   }
 
-  const handleReportFocus = (report: Report) => {
+  const handleReportFocus = useCallback((report: Report) => {
     const allDistrictGroups = groupReportsByDistrict(reports, 'name-asc')
     const allPlaceGroups = groupReportsByPlace(reports, 'name-asc')
     const matchingDistrict = allDistrictGroups.find((group) => group.reports.some((groupReport) => groupReport.id === report.id))
@@ -413,7 +416,33 @@ export default function MapPageClient() {
     setSelectedPlaceKey(nextPlaceKey)
 
     mapSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
+  }, [focusedReportRequest?.nonce, reports])
+
+  useEffect(() => {
+    handleReportFocusRef.current = handleReportFocus
+  }, [handleReportFocus])
+
+  useEffect(() => {
+    const queryReportId = searchParams.get('report')
+
+    if (!queryReportId) {
+      handledQueryReportIdRef.current = null
+      return
+    }
+
+    if (handledQueryReportIdRef.current === queryReportId) {
+      return
+    }
+
+    const report = reports.find((currentReport) => currentReport.id === queryReportId)
+
+    if (!report) {
+      return
+    }
+
+    handledQueryReportIdRef.current = queryReportId
+    handleReportFocusRef.current(report)
+  }, [reports, searchParams])
 
   const handleReportsViewed = (reportIds: string[]) => {
     if (!engagementEnabled) {

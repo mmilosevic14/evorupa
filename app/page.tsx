@@ -216,6 +216,14 @@ export default async function Home() {
                           {statusLabels[report.status] ?? report.status}
                         </span>
                       </div>
+                      <div className="mt-4">
+                        <Link
+                          href={`/map?report=${report.id}`}
+                          className="inline-flex rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-secondary/90"
+                        >
+                          Prikaži na mapi
+                        </Link>
+                      </div>
                     </div>
                   ))}
                 </div>

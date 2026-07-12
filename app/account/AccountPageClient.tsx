@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import ReportViewsTracker from '@/components/ReportViewsTracker'
@@ -377,6 +378,12 @@ export default function AccountPageClient() {
                           </div>
                         </div>
                         <div className="mt-5 flex flex-wrap gap-3">
+                          <Link
+                            href={`/map?report=${report.id}`}
+                            className="rounded-lg bg-secondary px-4 py-2 font-medium text-white transition hover:bg-secondary/90"
+                          >
+                            Prikaži na mapi
+                          </Link>
                           <button type="button" onClick={() => startEditingReport(report)} className="rounded-lg border border-gray-300 px-4 py-2 font-medium text-gray-700">Uredi</button>
                           <button type="button" onClick={() => deleteReport(report.id)} className="rounded-lg border border-red-300 px-4 py-2 font-medium text-red-700">Obriši</button>
                         </div>
