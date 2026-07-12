@@ -15,6 +15,11 @@ const DEFAULT_MAP_CENTER: [number, number] = [44.8176, 20.4554]
 const INDIVIDUAL_MARKER_ZOOM = 13
 const DEFAULT_MAP_HEIGHT_CLASS = 'h-96'
 const EXPANDED_MAP_HEIGHT_CLASS = 'h-[min(78vh,720px)]'
+const MAP_VIEW_ANIMATION = {
+  animate: true,
+  duration: 0.35,
+  easeLinearity: 0.2,
+}
 
 function preserveMapViewport(map: L.Map, delay = 320) {
   const center = map.getCenter()
@@ -22,7 +27,7 @@ function preserveMapViewport(map: L.Map, delay = 320) {
 
   const restoreView = () => {
     map.invalidateSize({ pan: false, debounceMoveend: true })
-    map.setView(center, zoom, { animate: false })
+    map.setView(center, zoom, MAP_VIEW_ANIMATION)
   }
 
   requestAnimationFrame(restoreView)
@@ -49,12 +54,12 @@ function fitActiveMarkers(map: L.Map, markersLayer: L.FeatureGroup | null, delay
     if (markerCount > 1) {
       map.fitBounds(markerBounds, {
         padding: [32, 32],
-        animate: false,
+        ...MAP_VIEW_ANIMATION,
       })
       return
     }
 
-    map.setView(markerBounds.getCenter(), map.getZoom(), { animate: false })
+    map.setView(markerBounds.getCenter(), map.getZoom(), MAP_VIEW_ANIMATION)
   }
 
   requestAnimationFrame(fitMarkers)
@@ -361,9 +366,10 @@ export default function MapComponent({
     if (markerBounds.isValid() && reports.length > 1) {
       map.fitBounds(markerBounds, {
         padding: [32, 32],
+        ...MAP_VIEW_ANIMATION,
       })
     } else if (reports.length === 1) {
-      map.setView([reports[0].latitude, reports[0].longitude], 11)
+      map.setView([reports[0].latitude, reports[0].longitude], 11, MAP_VIEW_ANIMATION)
     } else if (selectedDistrictBoundary) {
       map.fitBounds(
         [
@@ -372,6 +378,7 @@ export default function MapComponent({
         ],
         {
           padding: [24, 24],
+          ...MAP_VIEW_ANIMATION,
         },
       )
     }
