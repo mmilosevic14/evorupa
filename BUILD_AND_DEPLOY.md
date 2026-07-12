@@ -100,6 +100,8 @@ Name: CLOUDFLARE_API_TOKEN
 Value: [Your Cloudflare API Token]
 ```
 
+The GitHub Actions workflow reads the public Supabase URL and publishable key from [lib/supabase-public-config.json](lib/supabase-public-config.json), so those public values do not need to be duplicated in GitHub Actions secrets for the default production setup.
+
 **How to get these values:**
 
 1. Go to Cloudflare dashboard at https://dash.cloudflare.com

@@ -97,6 +97,7 @@ describe('Cloudflare Pages build contract', () => {
     const packageJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'package.json'), 'utf8'))
     const pagesConfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'wrangler.jsonc'), 'utf8'))
     const workerConfig = fs.readFileSync(path.resolve(__dirname, '..', 'wrangler.worker.toml'), 'utf8')
+    const workflowConfig = fs.readFileSync(path.resolve(__dirname, '..', '.github', 'workflows', 'cloudflare-pages.yml'), 'utf8')
 
     expect(packageJson.scripts['build:pages']).toBe('npm run build:cf && node scripts/prepare-pages-deploy.js')
     expect(packageJson.scripts['preview:pages']).toBe('npm run build:pages && npx wrangler pages dev .pages-deploy')
@@ -116,6 +117,10 @@ describe('Cloudflare Pages build contract', () => {
     expect(workerConfig).toContain('main = ".open-next/worker.js"')
     expect(workerConfig).toContain('binding = "ASSETS"')
     expect(workerConfig).toContain('compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]')
+    expect(workflowConfig).toContain('Load bundled public Supabase config')
+    expect(workflowConfig).toContain('wrangler pages deploy .pages-deploy --config wrangler.jsonc --project-name evorupa')
+    expect(workflowConfig).not.toContain('secrets.NEXT_PUBLIC_SUPABASE_URL')
+    expect(workflowConfig).not.toContain('secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY')
     expect(supportEntries).toContain('server-functions')
     expect(pagesRoutesConfig.exclude).toContain('/_next/static/*')
   })

@@ -9,6 +9,8 @@ Store these as GitHub repository secrets:
 - CLOUDFLARE_ACCOUNT_ID
 - CLOUDFLARE_API_TOKEN
 
+The public Supabase URL and publishable key are bundled from [lib/supabase-public-config.json](lib/supabase-public-config.json) during GitHub Actions builds. They do not need to be duplicated as GitHub secrets unless you intentionally want CI to override the checked-in public config.
+
 The project includes a local helper file:
 
 - .env.cloudflare.local (local only, ignored by git)
@@ -82,9 +84,8 @@ Workflow file:
 
 Behavior:
 
-- pull_request to main/master: install, type-check, lint, build
-- push to main/master: install, type-check, lint, build
-- deployment is handled by Cloudflare Pages native GitHub integration, not by GitHub Actions
+- pull_request to main/master: install, type-check, lint, test, build
+- push to main/master: install, type-check, lint, test, build, deploy with Wrangler from GitHub Actions
 - workflow_dispatch: manual trigger
 
 CI validation target:
@@ -94,7 +95,8 @@ CI validation target:
 
 Important:
 
-- Cloudflare Pages must be connected to the active GitHub repository slug.
+- GitHub Actions is the source of truth for production deployments in this repo.
+- Cloudflare Pages native GitHub builds should stay disabled for this project.
 - This repository has moved from `mmilosevic14/gderupa` to `mmilosevic14/evorupa`.
 - If Pages is still connected to the old repository slug, pushes can succeed on GitHub while `evorupa.pages.dev` keeps serving a stale deployment.
 

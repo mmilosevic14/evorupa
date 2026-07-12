@@ -32,6 +32,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Load bundled public Supabase config
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs')
+          const path = require('node:path')
+
+          const configPath = path.resolve('lib', 'supabase-public-config.json')
+          const config = JSON.parse(fs.readFileSync(configPath, 'utf8'))
+
+          fs.appendFileSync(process.env.GITHUB_ENV, `NEXT_PUBLIC_SUPABASE_URL=${config.url}\n`)
+          fs.appendFileSync(process.env.GITHUB_ENV, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${config.publishableKey}\n`)
+          NODE
+
       - name: Type check
         run: npm run type-check
 
@@ -43,29 +56,28 @@ jobs:
 
       - name: Build for Cloudflare Pages
         run: npm run build:pages
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
 
-      - name: Deploy to Cloudflare Pages
+      - name: Validate Cloudflare deploy secrets
         if: github.event_name == 'push'
-        run: |
-          for project in evorupa gderupa; do
-            npx wrangler pages deploy .pages-deploy --project-name "$project" --branch "${{ github.ref_name }}" --commit-hash "${{ github.sha }}"
-          done
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::Missing CLOUDFLARE_ACCOUNT_ID GitHub secret"; exit 1; }
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::Missing CLOUDFLARE_API_TOKEN GitHub secret"; exit 1; }
+
+      - name: Deploy to Cloudflare Pages
+        if: github.event_name == 'push'
+        run: npx wrangler pages deploy .pages-deploy --config wrangler.jsonc --project-name evorupa --branch "${{ github.ref_name }}" --commit-hash "${{ github.sha }}"
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
       - name: Verify Cloudflare Pages deployment
         if: github.event_name == 'push'
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
           GITHUB_SHA: ${{ github.sha }}
         run: |
           node <<'NODE'
@@ -76,10 +88,7 @@ jobs:
           const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
           const cfHeaders = { Authorization: `Bearer ${apiToken}` }
-          const projects = [
-            { name: 'evorupa', productionUrl: 'https://evorupa.pages.dev' },
-            { name: 'gderupa', productionUrl: 'https://gderupa.pages.dev' },
-          ]
+          const project = { name: 'evorupa', productionUrl: 'https://evorupa.pages.dev' }
 
           async function sleep(ms) {
             await new Promise((resolve) => setTimeout(resolve, ms))
@@ -151,9 +160,7 @@ jobs:
             return deployment
           }
 
-          for (const project of projects) {
-            await verifyProject(project)
-          }
+          await verifyProject(project)
 
           const reportsResponse = await fetch(`${supabaseUrl}/rest/v1/reports?select=id&limit=1`, {
             headers: {
@@ -187,7 +194,6 @@ jobs:
           NODE
 
   # GitHub Actions is the source of truth for validation and deployment.
-  # Cloudflare Pages' native GitHub deployments are disabled for evorupa and
-  # the legacy gderupa project because they can fail before clone/build
-  # initialization while Wrangler deploys the verified .pages-deploy artifact
-  # deterministically.
+  # Cloudflare Pages' native GitHub deployments are disabled because they can
+  # fail before clone/build initialization while Wrangler deploys the verified
+  # .pages-deploy artifact deterministically.
