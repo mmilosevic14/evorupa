@@ -101,10 +101,15 @@ export default function MapPageClient() {
   const [selectedDistrictKey, setSelectedDistrictKey] = useState('all')
   const [selectedPlaceKey, setSelectedPlaceKey] = useState('all')
   const [focusedReportRequest, setFocusedReportRequest] = useState<{ id: string; nonce: number } | null>(null)
+  const [pendingFocusRequest, setPendingFocusRequest] = useState<{
+    reportId: string
+    districtKey: string
+    placeKey: string
+    nonce: number
+  } | null>(null)
   const [reportsPage, setReportsPage] = useState(1)
   const [reportsPerPage, setReportsPerPage] = useState<number | 'all'>(REPORTS_PAGE_SIZE)
   const mapSectionRef = useRef<HTMLDivElement | null>(null)
-  const skipPlaceResetRef = useRef(false)
 
   useEffect(() => {
     const supabase = createClient()
@@ -327,13 +332,33 @@ export default function MapPageClient() {
   }, [reportsPage, reportsPerPage, selectedReports.length])
 
   useEffect(() => {
-    if (skipPlaceResetRef.current) {
-      skipPlaceResetRef.current = false
+    if (pendingFocusRequest) {
       return
     }
 
     setSelectedPlaceKey('all')
-  }, [selectedDistrictKey])
+  }, [pendingFocusRequest, selectedDistrictKey])
+
+  useEffect(() => {
+    if (!pendingFocusRequest) {
+      return
+    }
+
+    if (selectedDistrictKey !== pendingFocusRequest.districtKey) {
+      return
+    }
+
+    if (selectedPlaceKey !== pendingFocusRequest.placeKey) {
+      setSelectedPlaceKey(pendingFocusRequest.placeKey)
+      return
+    }
+
+    setFocusedReportRequest({
+      id: pendingFocusRequest.reportId,
+      nonce: pendingFocusRequest.nonce,
+    })
+    setPendingFocusRequest(null)
+  }, [pendingFocusRequest, selectedDistrictKey, selectedPlaceKey])
 
   useEffect(() => {
     setReportsPage(1)
@@ -361,19 +386,19 @@ export default function MapPageClient() {
     const matchingDistrict = allDistrictGroups.find((group) => group.reports.some((groupReport) => groupReport.id === report.id))
     const matchingPlace = allPlaceGroups.find((group) => group.reports.some((groupReport) => groupReport.id === report.id))
 
-    if (matchingDistrict) {
-      skipPlaceResetRef.current = true
-      setSelectedDistrictKey(matchingDistrict.key)
-    }
+    const nextDistrictKey = matchingDistrict?.key ?? 'all'
+    const nextPlaceKey = matchingPlace?.key ?? 'all'
+    const nextNonce = (focusedReportRequest?.nonce ?? 0) + 1
 
-    if (matchingPlace) {
-      setSelectedPlaceKey(matchingPlace.key)
-    }
+    setPendingFocusRequest({
+      reportId: report.id,
+      districtKey: nextDistrictKey,
+      placeKey: nextPlaceKey,
+      nonce: nextNonce,
+    })
 
-    setFocusedReportRequest((current) => ({
-      id: report.id,
-      nonce: (current?.nonce ?? 0) + 1,
-    }))
+    setSelectedDistrictKey(nextDistrictKey)
+    setSelectedPlaceKey(nextPlaceKey)
 
     mapSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }

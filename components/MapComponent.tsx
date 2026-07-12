@@ -163,6 +163,8 @@ export default function MapComponent({
   const fullscreenButtonRef = useRef<HTMLAnchorElement | null>(null)
   const isFullscreenActiveRef = useRef(false)
   const isSwitchingPopupRef = useRef(false)
+  const activePopupRef = useRef<L.Popup | null>(null)
+  const pendingViewportActionRef = useRef<'popup-open' | 'popup-close' | null>(null)
 
   useEffect(() => {
     const container = containerRef.current
@@ -240,24 +242,31 @@ export default function MapComponent({
     }
 
     const handlePopupOpen = (event: L.PopupEvent) => {
+      activePopupRef.current = event.popup
+
       if (!isFullscreenActiveRef.current) {
+        pendingViewportActionRef.current = 'popup-open'
         setIsPopupExpanded(true)
+      } else {
+        ensurePopupVisible(map, event.popup, 180)
       }
 
       isSwitchingPopupRef.current = false
-      ensurePopupVisible(map, event.popup, isFullscreenActiveRef.current ? 180 : 320)
     }
 
     const handlePopupClose = () => {
+      activePopupRef.current = null
+
       if (isSwitchingPopupRef.current) {
         return
       }
 
       if (!isFullscreenActiveRef.current) {
+        pendingViewportActionRef.current = 'popup-close'
         setIsPopupExpanded(false)
+      } else {
+        ensureActiveMarkersVisible(map, markersLayerRef.current)
       }
-
-      ensureActiveMarkersVisible(map, markersLayerRef.current)
     }
 
     const handleBeforePrint = () => {
@@ -286,6 +295,8 @@ export default function MapComponent({
       districtLayerRef.current?.clearLayers()
       districtLayerRef.current = null
       fullscreenButtonRef.current = null
+      activePopupRef.current = null
+      pendingViewportActionRef.current = null
       map.remove()
       mapRef.current = null
     }
@@ -512,6 +523,17 @@ export default function MapComponent({
     }
 
     invalidateMapSize(map)
+
+    if (pendingViewportActionRef.current === 'popup-open' && activePopupRef.current) {
+      ensurePopupVisible(map, activePopupRef.current)
+      pendingViewportActionRef.current = null
+      return
+    }
+
+    if (pendingViewportActionRef.current === 'popup-close') {
+      ensureActiveMarkersVisible(map, markersLayerRef.current)
+      pendingViewportActionRef.current = null
+    }
   }, [isPopupExpanded])
 
   return (
