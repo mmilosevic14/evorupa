@@ -131,13 +131,19 @@ curl -I http://127.0.0.1:8788/
 
 ## Deploy Targets
 
-The configured Cloudflare Pages project name is:
+The primary Cloudflare Pages project name is:
 
 ```text
 evorupa
 ```
 
-`gderupa` may also exist in the Cloudflare account. Do not deploy to it unless the owner explicitly confirms it is the intended target.
+The legacy Cloudflare Pages project name is:
+
+```text
+gderupa
+```
+
+GitHub Actions deploys the same `.pages-deploy` artifact to both projects. Keep both projects' native Cloudflare Git deployments disabled; they are not the source of truth.
 
 Deploy command:
 
@@ -145,7 +151,7 @@ Deploy command:
 npm run deploy:pages
 ```
 
-GitHub Actions is the source of truth for production deploys. Cloudflare Pages native GitHub deployments are disabled for this project because they have failed before `clone_repo`/`build` initialization. Do not re-enable native Git deployments unless you also prove that the deployed Cloudflare commit matches the pushed GitHub commit and that production Supabase access still works.
+GitHub Actions is the source of truth for production deploys. Cloudflare Pages native GitHub deployments are disabled for both `evorupa` and `gderupa` because they have failed before `clone_repo`/`build` initialization. Do not re-enable native Git deployments unless you also prove that the deployed Cloudflare commit matches the pushed GitHub commit and that production Supabase access still works.
 
 ## Known Local Benchmarks
 

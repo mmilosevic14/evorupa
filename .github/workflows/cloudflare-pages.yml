@@ -49,7 +49,10 @@ jobs:
 
       - name: Deploy to Cloudflare Pages
         if: github.event_name == 'push'
-        run: npx wrangler pages deploy .pages-deploy --project-name evorupa --branch "${{ github.ref_name }}" --commit-hash "${{ github.sha }}"
+        run: |
+          for project in evorupa gderupa; do
+            npx wrangler pages deploy .pages-deploy --project-name "$project" --branch "${{ github.ref_name }}" --commit-hash "${{ github.sha }}"
+          done
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -73,45 +76,30 @@ jobs:
           const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
           const cfHeaders = { Authorization: `Bearer ${apiToken}` }
-          const deploymentsUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/pages/projects/evorupa/deployments`
+          const projects = [
+            { name: 'evorupa', productionUrl: 'https://evorupa.pages.dev' },
+            { name: 'gderupa', productionUrl: 'https://gderupa.pages.dev' },
+          ]
 
           async function sleep(ms) {
             await new Promise((resolve) => setTimeout(resolve, ms))
           }
 
-          async function getDeployment() {
+          async function getDeployment(projectName) {
+            const deploymentsUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/pages/projects/${projectName}/deployments`
             const response = await fetch(deploymentsUrl, { headers: cfHeaders })
             if (!response.ok) {
-              throw new Error(`Cloudflare deployments request failed: ${response.status}`)
+              throw new Error(`Cloudflare deployments request failed for ${projectName}: ${response.status}`)
             }
 
             const payload = await response.json()
             if (!payload.success) {
-              throw new Error(`Cloudflare deployments API failed: ${JSON.stringify(payload.errors)}`)
+              throw new Error(`Cloudflare deployments API failed for ${projectName}: ${JSON.stringify(payload.errors)}`)
             }
 
             return payload.result.find(
               (deployment) => deployment.deployment_trigger?.metadata?.commit_hash === expectedSha,
             )
-          }
-
-          let deployment = null
-          for (let attempt = 1; attempt <= 12; attempt += 1) {
-            deployment = await getDeployment()
-            const status = deployment?.latest_stage?.status
-            if (status === 'success') {
-              break
-            }
-
-            if (status === 'failure') {
-              throw new Error(`Cloudflare deployment for ${expectedSha} failed`)
-            }
-
-            await sleep(5000)
-          }
-
-          if (!deployment || deployment.latest_stage?.status !== 'success') {
-            throw new Error(`Cloudflare deployment for ${expectedSha} did not become successful`)
           }
 
           async function fetchOkWithRetry(url) {
@@ -135,8 +123,36 @@ jobs:
             throw new Error(`${url} was not reachable after retries: ${lastStatus}`)
           }
 
-          for (const url of [deployment.url, 'https://evorupa.pages.dev']) {
-            await fetchOkWithRetry(url)
+          async function verifyProject(project) {
+            let deployment = null
+            for (let attempt = 1; attempt <= 12; attempt += 1) {
+              deployment = await getDeployment(project.name)
+              const status = deployment?.latest_stage?.status
+              if (status === 'success') {
+                break
+              }
+
+              if (status === 'failure') {
+                throw new Error(`Cloudflare deployment for ${project.name} at ${expectedSha} failed`)
+              }
+
+              await sleep(5000)
+            }
+
+            if (!deployment || deployment.latest_stage?.status !== 'success') {
+              throw new Error(`Cloudflare deployment for ${project.name} at ${expectedSha} did not become successful`)
+            }
+
+            for (const url of [deployment.url, project.productionUrl]) {
+              await fetchOkWithRetry(url)
+            }
+
+            console.log(`Verified Cloudflare deployment ${deployment.id} for ${project.name} at ${expectedSha}`)
+            return deployment
+          }
+
+          for (const project of projects) {
+            await verifyProject(project)
           }
 
           const reportsResponse = await fetch(`${supabaseUrl}/rest/v1/reports?select=id&limit=1`, {
@@ -167,11 +183,11 @@ jobs:
             throw new Error('Production home page rendered zero reports after successful Supabase smoke')
           }
 
-          console.log(`Verified Cloudflare deployment ${deployment.id} for ${expectedSha}`)
           console.log(`Supabase reports count: ${reportCount}; rendered home count: ${renderedCount}`)
           NODE
 
   # GitHub Actions is the source of truth for validation and deployment.
-  # Cloudflare Pages' native GitHub deployments are disabled because they can
-  # fail before clone/build initialization while Wrangler deploys the verified
-  # .pages-deploy artifact deterministically.
+  # Cloudflare Pages' native GitHub deployments are disabled for evorupa and
+  # the legacy gderupa project because they can fail before clone/build
+  # initialization while Wrangler deploys the verified .pages-deploy artifact
+  # deterministically.
