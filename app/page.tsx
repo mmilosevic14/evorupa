@@ -74,6 +74,30 @@ export default async function Home() {
         <p className="text-xl text-gray-200 mb-8">
           EvoRupa pomaže da prijaviš rupe i druge probleme na putevima i infrastrukturi direktno lokalnoj upravi.
         </p>
+        <p className="mx-auto mb-8 max-w-2xl text-sm text-blue-100">
+          Za povratne informacije, predloge i učešće u razvoju koristi naš GitHub:
+          {' '}
+          <a
+            href="https://github.com/mmilosevic14/evorupa/issues"
+            target="_blank"
+            rel="noreferrer"
+            className="font-semibold text-white underline underline-offset-4"
+          >
+            Issues
+          </a>
+          {' '}
+          i
+          {' '}
+          <a
+            href="https://github.com/mmilosevic14/evorupa/discussions"
+            target="_blank"
+            rel="noreferrer"
+            className="font-semibold text-white underline underline-offset-4"
+          >
+            Discussions
+          </a>
+          .
+        </p>
         <div className="space-x-4">
           <Link href="/map" className="btn-primary inline-block">
             Pogledaj mapu
@@ -106,8 +130,8 @@ export default async function Home() {
           <div className="grid md:grid-cols-3 gap-8">
             <div className="card">
               <div className="text-4xl mb-4">📸</div>
-              <h4 className="font-bold text-lg mb-2">1. Fotografuj</h4>
-              <p>Fotografuj problem na putu ili infrastrukturi</p>
+              <h4 className="font-bold text-lg mb-2">1. Slikaj</h4>
+              <p>Slikaj problem na putu ili infrastrukturi</p>
             </div>
             <div className="card">
               <div className="text-4xl mb-4">📍</div>
@@ -197,6 +221,33 @@ export default async function Home() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-slate-900 py-16 text-white">
+        <div className="mx-auto flex max-w-4xl flex-col items-center gap-4 px-4 text-center">
+          <h3 className="text-3xl font-bold">Uključi se preko GitHub-a</h3>
+          <p className="max-w-2xl text-slate-300">
+            Prijavi bag, predloži poboljšanje ili učestvuj u planiranju narednih koraka kroz GitHub Issues i Discussions.
+          </p>
+          <div className="flex flex-wrap justify-center gap-4">
+            <a
+              href="https://github.com/mmilosevic14/evorupa/issues"
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-full bg-white px-5 py-3 font-semibold text-slate-900 transition hover:bg-slate-200"
+            >
+              Otvori issue
+            </a>
+            <a
+              href="https://github.com/mmilosevic14/evorupa/discussions"
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-full border border-white/30 px-5 py-3 font-semibold text-white transition hover:border-white hover:bg-white/10"
+            >
+              Otvori diskusiju
+            </a>
           </div>
         </div>
       </section>

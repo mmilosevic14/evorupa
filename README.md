@@ -188,6 +188,12 @@ docker run -p 3000:3000 evorupa
 
 Dobrodošli su svi doprinosi! 
 
+Za bagove i konkretne predloge koristi GitHub Issues:
+- https://github.com/mmilosevic14/evorupa/issues
+
+Za pitanja, ideje i širu diskusiju koristi GitHub Discussions:
+- https://github.com/mmilosevic14/evorupa/discussions
+
 1. Fork projekta
 2. Kreiraj feature branch (`git checkout -b feature/nova-funkcionalnost`)
 3. Commit promene (`git commit -m 'Dodaj novu funkcionalnost'`)
@@ -200,7 +206,10 @@ MIT License - Slobodno koristi kod
 
 ## 📞 Kontakt
 
-Za pitanja, otvori GitHub issue ili nas kontaktiraj na: dev@gderupa.rs
+Za pitanja, povratne informacije i učešće u razvoju koristi GitHub kanale:
+
+- Issues: https://github.com/mmilosevic14/evorupa/issues
+- Discussions: https://github.com/mmilosevic14/evorupa/discussions
 
 ## 🙏 Hvala
 
