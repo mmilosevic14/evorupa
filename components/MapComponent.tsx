@@ -172,8 +172,6 @@ export default function MapComponent({
       if (!isFullscreenActiveRef.current) {
         setIsPopupExpanded(true)
       }
-
-      fitActiveMarkers(map, markersLayerRef.current)
     }
 
     const handlePopupClose = () => {
