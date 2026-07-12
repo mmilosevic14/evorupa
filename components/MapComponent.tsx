@@ -66,6 +66,27 @@ function fitActiveMarkers(map: L.Map, markersLayer: L.FeatureGroup | null, delay
   window.setTimeout(fitMarkers, delay)
 }
 
+function ensurePopupVisible(map: L.Map, popup: L.Popup, delay = 320) {
+  const panPopupIntoView = () => {
+    const popupLatLng = popup.getLatLng()
+
+    if (!popupLatLng) {
+      return
+    }
+
+    map.invalidateSize({ pan: false, debounceMoveend: true })
+    popup.update()
+    map.panInside(popupLatLng, {
+      paddingTopLeft: [24, 24],
+      paddingBottomRight: [24, 140],
+      ...MAP_VIEW_ANIMATION,
+    })
+  }
+
+  requestAnimationFrame(panPopupIntoView)
+  window.setTimeout(panPopupIntoView, delay)
+}
+
 // Fix Leaflet marker icons
 if (typeof window !== 'undefined') {
   delete (L.Icon.Default.prototype as any)._getIconUrl
@@ -173,10 +194,12 @@ export default function MapComponent({
       preserveMapViewport(map)
     }
 
-    const handlePopupOpen = () => {
+    const handlePopupOpen = (event: L.PopupEvent) => {
       if (!isFullscreenActiveRef.current) {
         setIsPopupExpanded(true)
       }
+
+      ensurePopupVisible(map, event.popup, isFullscreenActiveRef.current ? 180 : 320)
     }
 
     const handlePopupClose = () => {
