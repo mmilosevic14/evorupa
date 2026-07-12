@@ -343,7 +343,7 @@ export default function MapPageClient() {
     }
 
     setSelectedPlaceKey('all')
-  }, [pendingFocusRequest, selectedDistrictKey])
+  }, [selectedDistrictKey])
 
   useEffect(() => {
     if (!pendingFocusRequest) {
