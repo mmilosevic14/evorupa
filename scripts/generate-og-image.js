@@ -2,7 +2,8 @@ const fs = require('node:fs')
 const path = require('node:path')
 const sharp = require('sharp')
 
-const outputPath = path.resolve(__dirname, '..', 'public', 'og-image.png')
+const publicDir = path.resolve(__dirname, '..', 'public')
+const outputPath = path.join(publicDir, 'og-image.png')
 
 function escapeXml(value) {
   return value
@@ -73,13 +74,80 @@ const svg = `
 
 fs.mkdirSync(path.dirname(outputPath), { recursive: true })
 
-sharp(Buffer.from(svg))
-  .png({ compressionLevel: 9, quality: 90 })
-  .toFile(outputPath)
-  .then(() => {
-    console.log(`Generated ${path.relative(process.cwd(), outputPath)}`)
-  })
-  .catch((error) => {
-    console.error(error)
-    process.exit(1)
-  })
+function logoSvg(size) {
+  const center = size / 2
+  const outerRadius = size * 0.46
+
+  return `
+  <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="blue" cx="34%" cy="28%" r="70%">
+        <stop stop-color="#38BDF8"/>
+        <stop offset="0.55" stop-color="#2563EB"/>
+        <stop offset="1" stop-color="#1E3A8A"/>
+      </radialGradient>
+      <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+        <feDropShadow dx="0" dy="${size * 0.025}" stdDeviation="${size * 0.025}" flood-color="#0F172A" flood-opacity="0.28"/>
+      </filter>
+    </defs>
+    <rect width="${size}" height="${size}" fill="none"/>
+    <circle cx="${center}" cy="${center}" r="${outerRadius}" fill="url(#blue)" filter="url(#softShadow)"/>
+    <path
+      d="
+        M ${size * 0.36} ${size * 0.43}
+        C ${size * 0.45} ${size * 0.31}, ${size * 0.63} ${size * 0.34}, ${size * 0.68} ${size * 0.47}
+        C ${size * 0.74} ${size * 0.62}, ${size * 0.61} ${size * 0.75}, ${size * 0.47} ${size * 0.71}
+        C ${size * 0.34} ${size * 0.67}, ${size * 0.27} ${size * 0.55}, ${size * 0.36} ${size * 0.43}
+        Z"
+      fill="#FFFFFF"
+      stroke="#DC2626"
+      stroke-width="${Math.max(5, size * 0.075)}"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M ${size * 0.43} ${size * 0.48} C ${size * 0.49} ${size * 0.42}, ${size * 0.58} ${size * 0.44}, ${size * 0.61} ${size * 0.51}"
+      fill="none"
+      stroke="#FCA5A5"
+      stroke-width="${Math.max(2, size * 0.025)}"
+      stroke-linecap="round"
+      opacity="0.75"
+    />
+  </svg>
+  `
+}
+
+async function writePng(svgContent, targetPath, size) {
+  await sharp(Buffer.from(svgContent))
+    .resize(size, size)
+    .png({ compressionLevel: 9, quality: 90 })
+    .toFile(targetPath)
+  console.log(`Generated ${path.relative(process.cwd(), targetPath)}`)
+}
+
+async function main() {
+  fs.mkdirSync(publicDir, { recursive: true })
+
+  await sharp(Buffer.from(svg))
+    .png({ compressionLevel: 9, quality: 90 })
+    .toFile(outputPath)
+  console.log(`Generated ${path.relative(process.cwd(), outputPath)}`)
+
+  const iconTargets = [
+    ['logo.png', 512],
+    ['icon-512.png', 512],
+    ['maskable-512.png', 512],
+    ['icon-192.png', 192],
+    ['maskable-192.png', 192],
+    ['apple-touch-icon.png', 180],
+    ['favicon-32x32.png', 32],
+  ]
+
+  for (const [fileName, size] of iconTargets) {
+    await writePng(logoSvg(size), path.join(publicDir, fileName), size)
+  }
+}
+
+main().catch((error) => {
+  console.error(error)
+  process.exit(1)
+})

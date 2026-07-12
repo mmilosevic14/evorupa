@@ -32,6 +32,13 @@ export const metadata: Metadata = {
   alternates: {
     canonical: '/',
   },
+  icons: {
+    icon: [
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
   robots: {
     index: true,
     follow: true,
@@ -74,6 +81,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="sr">
+      <head>
+        <meta property="og:logo" content="https://evorupa.rs/logo.png" />
+      </head>
       <body className="antialiased">
         <nav className="bg-secondary text-white shadow-lg">
           <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
