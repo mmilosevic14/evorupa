@@ -43,6 +43,9 @@ jobs:
 
       - name: Build for Cloudflare Pages
         run: npm run build:pages
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
 
       - name: Deploy to Cloudflare Pages
         if: github.event_name == 'push'
@@ -52,6 +55,103 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+
+      - name: Verify Cloudflare Pages deployment
+        if: github.event_name == 'push'
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          node <<'NODE'
+          const accountId = process.env.CLOUDFLARE_ACCOUNT_ID
+          const apiToken = process.env.CLOUDFLARE_API_TOKEN
+          const expectedSha = process.env.GITHUB_SHA
+          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+          const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+
+          const cfHeaders = { Authorization: `Bearer ${apiToken}` }
+          const deploymentsUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/pages/projects/evorupa/deployments`
+
+          async function sleep(ms) {
+            await new Promise((resolve) => setTimeout(resolve, ms))
+          }
+
+          async function getDeployment() {
+            const response = await fetch(deploymentsUrl, { headers: cfHeaders })
+            if (!response.ok) {
+              throw new Error(`Cloudflare deployments request failed: ${response.status}`)
+            }
+
+            const payload = await response.json()
+            if (!payload.success) {
+              throw new Error(`Cloudflare deployments API failed: ${JSON.stringify(payload.errors)}`)
+            }
+
+            return payload.result.find(
+              (deployment) => deployment.deployment_trigger?.metadata?.commit_hash === expectedSha,
+            )
+          }
+
+          let deployment = null
+          for (let attempt = 1; attempt <= 12; attempt += 1) {
+            deployment = await getDeployment()
+            const status = deployment?.latest_stage?.status
+            if (status === 'success') {
+              break
+            }
+
+            if (status === 'failure') {
+              throw new Error(`Cloudflare deployment for ${expectedSha} failed`)
+            }
+
+            await sleep(5000)
+          }
+
+          if (!deployment || deployment.latest_stage?.status !== 'success') {
+            throw new Error(`Cloudflare deployment for ${expectedSha} did not become successful`)
+          }
+
+          for (const url of [deployment.url, 'https://evorupa.pages.dev']) {
+            const response = await fetch(url)
+            if (!response.ok) {
+              throw new Error(`${url} returned HTTP ${response.status}`)
+            }
+          }
+
+          const reportsResponse = await fetch(`${supabaseUrl}/rest/v1/reports?select=id&limit=1`, {
+            headers: {
+              apikey: supabaseKey,
+              Authorization: `Bearer ${supabaseKey}`,
+              Prefer: 'count=exact',
+              Range: '0-0',
+            },
+          })
+
+          if (!reportsResponse.ok) {
+            throw new Error(`Supabase reports smoke failed: HTTP ${reportsResponse.status}`)
+          }
+
+          const contentRange = reportsResponse.headers.get('content-range') ?? ''
+          const reportCount = Number(contentRange.split('/')[1] ?? 0)
+          if (!Number.isFinite(reportCount) || reportCount <= 0) {
+            throw new Error(`Supabase reports smoke returned invalid count: ${contentRange}`)
+          }
+
+          const homeResponse = await fetch('https://evorupa.pages.dev')
+          const homeHtml = await homeResponse.text()
+          const renderedCount = Number(
+            homeHtml.match(/Ukupno prijava<\/p><p[^>]*>(\d+)/)?.[1] ?? 0,
+          )
+          if (renderedCount <= 0) {
+            throw new Error('Production home page rendered zero reports after successful Supabase smoke')
+          }
+
+          console.log(`Verified Cloudflare deployment ${deployment.id} for ${expectedSha}`)
+          console.log(`Supabase reports count: ${reportCount}; rendered home count: ${renderedCount}`)
+          NODE
 
   # GitHub Actions is the source of truth for validation and deployment.
   # Cloudflare Pages' native GitHub deployments are disabled because they can

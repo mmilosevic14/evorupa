@@ -87,6 +87,30 @@ npm run build:pages
 
 `npm run build:pages` is the closest local equivalent to the Cloudflare Pages advanced-mode build. It creates `.open-next` and `.pages-deploy`, both ignored.
 
+## Post-Push Verification
+
+After every push or deployment-related update, verify both automation layers:
+
+1. GitHub Actions run for the pushed commit is `success`.
+2. Cloudflare Pages has a successful deployment whose trigger commit hash matches the pushed commit.
+3. `https://evorupa.pages.dev/` returns HTTP 200.
+4. Supabase access works from production: the home page must render a nonzero `Ukupno prijava` count when the `reports` table has rows.
+
+Useful commands:
+
+```bash
+gh run list --repo mmilosevic14/evorupa --limit 5
+
+set -a
+. ./.env.cloudflare.local
+set +a
+npx wrangler pages deployment list --project-name evorupa
+
+curl -I https://evorupa.pages.dev/
+```
+
+Do not treat a green GitHub build alone as enough. The deployed Cloudflare version and the production Supabase-backed UI must be checked as well.
+
 ## Local Preview
 
 For Cloudflare Pages preview:
@@ -120,6 +144,8 @@ Deploy command:
 ```bash
 npm run deploy:pages
 ```
+
+GitHub Actions is the source of truth for production deploys. Cloudflare Pages native GitHub deployments are disabled for this project because they have failed before `clone_repo`/`build` initialization. Do not re-enable native Git deployments unless you also prove that the deployed Cloudflare commit matches the pushed GitHub commit and that production Supabase access still works.
 
 ## Known Local Benchmarks
 
