@@ -111,6 +111,11 @@ export default function MapPageClient() {
   const [reportsPerPage, setReportsPerPage] = useState<number | 'all'>(REPORTS_PAGE_SIZE)
   const mapSectionRef = useRef<HTMLDivElement | null>(null)
   const skipPlaceResetRef = useRef(false)
+  const pendingFocusRequestRef = useRef(pendingFocusRequest)
+
+  useEffect(() => {
+    pendingFocusRequestRef.current = pendingFocusRequest
+  }, [pendingFocusRequest])
 
   useEffect(() => {
     const supabase = createClient()
@@ -338,7 +343,7 @@ export default function MapPageClient() {
       return
     }
 
-    if (pendingFocusRequest) {
+    if (pendingFocusRequestRef.current) {
       return
     }
 
