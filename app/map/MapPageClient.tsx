@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import ReportViewsTracker from '@/components/ReportViewsTracker'
 import { incrementReportViews, toggleReportUpvote } from '@/lib/reportEngagement'
@@ -100,8 +100,10 @@ export default function MapPageClient() {
   const [loading, setLoading] = useState(true)
   const [selectedDistrictKey, setSelectedDistrictKey] = useState('all')
   const [selectedPlaceKey, setSelectedPlaceKey] = useState('all')
+  const [focusedReportRequest, setFocusedReportRequest] = useState<{ id: string; nonce: number } | null>(null)
   const [reportsPage, setReportsPage] = useState(1)
   const [reportsPerPage, setReportsPerPage] = useState<number | 'all'>(REPORTS_PAGE_SIZE)
+  const mapSectionRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     const supabase = createClient()
@@ -347,6 +349,26 @@ export default function MapPageClient() {
     setSelectedPlaceKey(group.key)
   }
 
+  const handleReportFocus = (report: Report) => {
+    const matchingDistrict = districtGroups.find((group) => group.reports.some((groupReport) => groupReport.id === report.id))
+    const matchingPlace = placeDropdownGroups.find((group) => group.reports.some((groupReport) => groupReport.id === report.id))
+
+    if (matchingDistrict) {
+      setSelectedDistrictKey(matchingDistrict.key)
+    }
+
+    if (matchingPlace) {
+      setSelectedPlaceKey(matchingPlace.key)
+    }
+
+    setFocusedReportRequest((current) => ({
+      id: report.id,
+      nonce: (current?.nonce ?? 0) + 1,
+    }))
+
+    mapSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   const handleReportsViewed = (reportIds: string[]) => {
     if (!engagementEnabled) {
       return
@@ -475,13 +497,17 @@ export default function MapPageClient() {
               </div>
             </div>
 
-            <MapComponent
-              reports={selectedReports}
-              selectedDistrict={selectedDistrict?.district ?? null}
-              onPlaceGroupSelect={handlePlaceGroupSelect}
-              onReportsViewed={handleReportsViewed}
-              statusLabels={statusLabels}
-            />
+            <div ref={mapSectionRef}>
+              <MapComponent
+                reports={selectedReports}
+                selectedDistrict={selectedDistrict?.district ?? null}
+                focusedReportId={focusedReportRequest?.id ?? null}
+                focusedReportNonce={focusedReportRequest?.nonce ?? 0}
+                onPlaceGroupSelect={handlePlaceGroupSelect}
+                onReportsViewed={handleReportsViewed}
+                statusLabels={statusLabels}
+              />
+            </div>
 
             {!selectedPlace && !selectedDistrict && (
             <div className="mt-8 bg-white rounded-lg shadow-md p-6 no-print">
@@ -580,6 +606,13 @@ export default function MapPageClient() {
                             {showDistrictLine && <p><strong>Okrug:</strong> {location.district}</p>}
                             {getVisibleAuthorName(report, authorNames) && <p><strong>Autor:</strong> {getVisibleAuthorName(report, authorNames)}</p>}
                             <p className="inline-flex items-center gap-1.5"><MetadataIcon type="location" /><span><strong>Koordinate:</strong> {report.latitude.toFixed(4)}, {report.longitude.toFixed(4)}</span></p>
+                            <button
+                              type="button"
+                              onClick={() => handleReportFocus(report)}
+                              className="mt-3 rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-secondary/90"
+                            >
+                              Prikaži na mapi
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -686,6 +719,13 @@ export default function MapPageClient() {
                         {showMunicipalityLine && <p><strong>Opština:</strong> {location.municipality}</p>}
                         {getVisibleAuthorName(report, authorNames) && <p><strong>Autor:</strong> {getVisibleAuthorName(report, authorNames)}</p>}
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => handleReportFocus(report)}
+                        className="mt-4 rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-secondary/90"
+                      >
+                        Prikaži na mapi
+                      </button>
                       {engagementEnabled && (
                         <div className="mt-4 flex flex-wrap items-center gap-2">
                           <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
@@ -696,7 +736,10 @@ export default function MapPageClient() {
                           </span>
                           <button
                             type="button"
-                            onClick={() => handleUpvote(report.id)}
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              void handleUpvote(report.id)
+                            }}
                             disabled={upvotePendingId === report.id}
                             className={`rounded-full px-3 py-1 text-xs font-medium transition ${
                               upvotedReportIds.has(report.id)

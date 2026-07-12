@@ -66,6 +66,37 @@ function fitActiveMarkers(map: L.Map, markersLayer: L.FeatureGroup | null, delay
   window.setTimeout(fitMarkers, delay)
 }
 
+function ensureActiveMarkersVisible(map: L.Map, markersLayer: L.FeatureGroup | null, delay = 320) {
+  if (!markersLayer) {
+    preserveMapViewport(map, delay)
+    return
+  }
+
+  const fitMarkersIfNeeded = () => {
+    map.invalidateSize({ pan: false, debounceMoveend: true })
+
+    const markerBounds = markersLayer.getBounds()
+
+    if (!markerBounds.isValid()) {
+      return
+    }
+
+    const visibleBounds = map.getBounds().pad(-0.08)
+    const markersAreVisible = markersLayer
+      .getLayers()
+      .every((layer) => layer instanceof L.Marker && visibleBounds.contains(layer.getLatLng()))
+
+    if (markersAreVisible) {
+      return
+    }
+
+    fitActiveMarkers(map, markersLayer, 0)
+  }
+
+  requestAnimationFrame(fitMarkersIfNeeded)
+  window.setTimeout(fitMarkersIfNeeded, delay)
+}
+
 function ensurePopupVisible(map: L.Map, popup: L.Popup, delay = 320) {
   const panPopupIntoView = () => {
     map.invalidateSize({ pan: false, debounceMoveend: true })
@@ -98,12 +129,16 @@ if (typeof window !== 'undefined') {
 export default function MapComponent({
   reports = [],
   selectedDistrict = null,
+  focusedReportId = null,
+  focusedReportNonce = 0,
   onPlaceGroupSelect,
   onReportsViewed,
   statusLabels,
 }: {
   reports?: Report[]
   selectedDistrict?: string | null
+  focusedReportId?: string | null
+  focusedReportNonce?: number
   onPlaceGroupSelect?: (group: PlaceGroup) => void
   onReportsViewed?: (reportIds: string[]) => void
   statusLabels?: Record<string, string>
@@ -114,9 +149,11 @@ export default function MapComponent({
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<L.Map | null>(null)
   const markersLayerRef = useRef<L.FeatureGroup | null>(null)
+  const reportMarkersRef = useRef<Map<string, L.Marker>>(new Map())
   const districtLayerRef = useRef<L.LayerGroup | null>(null)
   const fullscreenButtonRef = useRef<HTMLAnchorElement | null>(null)
   const isFullscreenActiveRef = useRef(false)
+  const isSwitchingPopupRef = useRef(false)
 
   useEffect(() => {
     const container = containerRef.current
@@ -173,6 +210,7 @@ export default function MapComponent({
     new FullscreenControl({ position: 'topleft' }).addTo(map)
 
     markersLayerRef.current = L.featureGroup().addTo(map)
+    reportMarkersRef.current = new Map()
     districtLayerRef.current = L.layerGroup().addTo(map)
     mapRef.current = map
 
@@ -197,15 +235,20 @@ export default function MapComponent({
         setIsPopupExpanded(true)
       }
 
+      isSwitchingPopupRef.current = false
       ensurePopupVisible(map, event.popup, isFullscreenActiveRef.current ? 180 : 320)
     }
 
     const handlePopupClose = () => {
+      if (isSwitchingPopupRef.current) {
+        return
+      }
+
       if (!isFullscreenActiveRef.current) {
         setIsPopupExpanded(false)
       }
 
-      fitActiveMarkers(map, markersLayerRef.current)
+      ensureActiveMarkersVisible(map, markersLayerRef.current)
     }
 
     const handleBeforePrint = () => {
@@ -230,6 +273,7 @@ export default function MapComponent({
       map.off('popupclose', handlePopupClose)
       markersLayerRef.current?.clearLayers()
       markersLayerRef.current = null
+      reportMarkersRef.current.clear()
       districtLayerRef.current?.clearLayers()
       districtLayerRef.current = null
       fullscreenButtonRef.current = null
@@ -272,6 +316,7 @@ export default function MapComponent({
 
     const renderMarkers = () => {
       markersLayer.clearLayers()
+      reportMarkersRef.current.clear()
 
       const shouldKeepPlaceClusters = Boolean(selectedDistrict) && placeGroups.length > 1
       const shouldShowIndividualReports =
@@ -281,6 +326,10 @@ export default function MapComponent({
         reports.forEach((report) => {
           const photoUrl = getReportPhotoUrl(report.photo_url)
           const marker = L.marker([report.latitude, report.longitude])
+          marker.on('click', () => {
+            const mapWithPopup = map as L.Map & { _popup?: L.Popup | null }
+            isSwitchingPopupRef.current = Boolean(mapWithPopup._popup?.isOpen())
+          })
           marker.bindPopup(`
             <div class="text-sm" style="min-width:260px;max-width:320px;">
               <img
@@ -297,6 +346,7 @@ export default function MapComponent({
           marker.on('popupopen', () => {
             onReportsViewed?.([report.id])
           })
+          reportMarkersRef.current.set(report.id, marker)
           marker.addTo(markersLayer)
         })
 
@@ -331,6 +381,8 @@ export default function MapComponent({
         })
         if (onPlaceGroupSelect) {
           marker.on('click', () => {
+            const mapWithPopup = map as L.Map & { _popup?: L.Popup | null }
+            isSwitchingPopupRef.current = Boolean(mapWithPopup._popup?.isOpen())
             onPlaceGroupSelect(group)
           })
           marker.bindTooltip(
@@ -414,6 +466,24 @@ export default function MapComponent({
       map.off('zoomend', handleZoomChange)
     }
   }, [onPlaceGroupSelect, onReportsViewed, reports, selectedDistrict, statusLabels])
+
+  useEffect(() => {
+    const map = mapRef.current
+
+    if (!map || !focusedReportId) {
+      return
+    }
+
+    const marker = reportMarkersRef.current.get(focusedReportId)
+
+    if (!marker) {
+      return
+    }
+
+    isSwitchingPopupRef.current = true
+    marker.openPopup()
+    ensurePopupVisible(map, marker.getPopup() ?? new L.Popup(), isFullscreenActiveRef.current ? 180 : 320)
+  }, [focusedReportId, focusedReportNonce])
 
   useEffect(() => {
     const map = mapRef.current
