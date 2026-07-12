@@ -22,6 +22,8 @@ const pagesRoutesConfig = {
     '/_next/static/*',
     '/favicon.ico',
     '/manifest.json',
+    '/og-image.png',
+    '/screenshots/*',
     '/sw.js',
     '/workbox-*',
     '/default-report-photo.jpg',

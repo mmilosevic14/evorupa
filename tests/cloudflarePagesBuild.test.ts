@@ -125,5 +125,7 @@ describe('Cloudflare Pages build contract', () => {
     expect(workflowConfig).not.toContain('secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY')
     expect(supportEntries).toContain('server-functions')
     expect(pagesRoutesConfig.exclude).toContain('/_next/static/*')
+    expect(pagesRoutesConfig.exclude).toContain('/og-image.png')
+    expect(pagesRoutesConfig.exclude).toContain('/screenshots/*')
   })
 })
