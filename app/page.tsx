@@ -198,7 +198,11 @@ export default async function Home() {
               ) : (
                 <div className="mt-4 space-y-3">
                   {featuredReports.map((report) => (
-                    <div key={report.id} className="rounded-xl border border-gray-200 p-4">
+                    <Link
+                      key={report.id}
+                      href={`/map?report=${report.id}`}
+                      className="block rounded-xl border border-gray-200 p-4 transition hover:border-secondary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/40"
+                    >
                       <div className="flex items-start justify-between gap-4">
                         <div>
                           <p className="font-semibold">{report.title}</p>
@@ -216,15 +220,7 @@ export default async function Home() {
                           {statusLabels[report.status] ?? report.status}
                         </span>
                       </div>
-                      <div className="mt-4">
-                        <Link
-                          href={`/map?report=${report.id}`}
-                          className="inline-flex rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-secondary/90"
-                        >
-                          Prikaži na mapi
-                        </Link>
-                      </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               )}

@@ -28,6 +28,10 @@ function normalizeValue(value: string | null | undefined) {
   return value?.trim().toLowerCase() ?? ''
 }
 
+function isInteractiveTarget(target: EventTarget | null) {
+  return target instanceof HTMLElement && Boolean(target.closest('button, a, input, select, textarea, summary, [role="button"], [role="link"]'))
+}
+
 function getCategoryLabel(category: string) {
   return category
 }
@@ -394,6 +398,15 @@ export default function MapPageClient() {
     setSelectedPlaceKey(group.key)
   }
 
+  const handleReportCardKeyDown = (event: React.KeyboardEvent<HTMLDivElement>, report: Report) => {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return
+    }
+
+    event.preventDefault()
+    handleReportFocus(report)
+  }
+
   const handleReportFocus = useCallback((report: Report) => {
     const allDistrictGroups = groupReportsByDistrict(reports, 'name-asc')
     const allPlaceGroups = groupReportsByPlace(reports, 'name-asc')
@@ -665,7 +678,14 @@ export default function MapPageClient() {
                         normalizeValue(location.district) !== normalizeValue(selectedPlace.district))
 
                     return (
-                      <div key={report.id} className="border border-gray-200 rounded-lg p-4 print-card print-item">
+                      <div
+                        key={report.id}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => handleReportFocus(report)}
+                        onKeyDown={(event) => handleReportCardKeyDown(event, report)}
+                        className="border border-gray-200 rounded-lg p-4 print-card print-item cursor-pointer transition hover:border-secondary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/40"
+                      >
                         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between print-item-layout">
                           <div>
                             <h3 className="font-bold text-lg">{report.title}</h3>
@@ -681,13 +701,6 @@ export default function MapPageClient() {
                             {showDistrictLine && <p><strong>Okrug:</strong> {location.district}</p>}
                             {getVisibleAuthorName(report, authorNames) && <p><strong>Autor:</strong> {getVisibleAuthorName(report, authorNames)}</p>}
                             <p className="inline-flex items-center gap-1.5"><MetadataIcon type="location" /><span><strong>Koordinate:</strong> {report.latitude.toFixed(4)}, {report.longitude.toFixed(4)}</span></p>
-                            <button
-                              type="button"
-                              onClick={() => handleReportFocus(report)}
-                              className="mt-3 rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-secondary/90"
-                            >
-                              Prikaži na mapi
-                            </button>
                           </div>
                         </div>
                       </div>
@@ -770,7 +783,20 @@ export default function MapPageClient() {
                         normalizeValue(location.municipality) !== normalizeValue(selectedPlace.municipality))
 
                     return (
-                    <div key={report.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-lg transition">
+                    <div
+                      key={report.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={(event) => {
+                        if (isInteractiveTarget(event.target)) {
+                          return
+                        }
+
+                        handleReportFocus(report)
+                      }}
+                      onKeyDown={(event) => handleReportCardKeyDown(event, report)}
+                      className="border border-gray-200 rounded-lg p-4 hover:shadow-lg transition cursor-pointer hover:border-secondary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/40"
+                    >
                       <div className="relative w-full h-48 mb-3 overflow-hidden rounded-lg bg-gray-100">
                         <Image
                           src={getReportPhotoUrl(report.photo_url)}
@@ -794,13 +820,6 @@ export default function MapPageClient() {
                         {showMunicipalityLine && <p><strong>Opština:</strong> {location.municipality}</p>}
                         {getVisibleAuthorName(report, authorNames) && <p><strong>Autor:</strong> {getVisibleAuthorName(report, authorNames)}</p>}
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleReportFocus(report)}
-                        className="mt-4 rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-secondary/90"
-                      >
-                        Prikaži na mapi
-                      </button>
                       {engagementEnabled && (
                         <div className="mt-4 flex flex-wrap items-center gap-2">
                           <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">

@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import ReportViewsTracker from '@/components/ReportViewsTracker'
@@ -55,6 +54,15 @@ export default function AccountPageClient() {
   const [editableReport, setEditableReport] = useState<EditableReport | null>(null)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+
+  const handleReportCardKeyDown = (event: React.KeyboardEvent<HTMLDivElement>, reportId: string) => {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return
+    }
+
+    event.preventDefault()
+    router.push(`/map?report=${reportId}`)
+  }
 
   useEffect(() => {
     let isMounted = true
@@ -325,7 +333,14 @@ export default function AccountPageClient() {
                 const location = parseReportLocation(report.tags)
 
                 return (
-                  <div key={report.id} className="rounded-xl border border-gray-200 p-5">
+                  <div
+                    key={report.id}
+                    role="link"
+                    tabIndex={0}
+                    onClick={() => router.push(`/map?report=${report.id}`)}
+                    onKeyDown={(event) => handleReportCardKeyDown(event, report.id)}
+                    className="rounded-xl border border-gray-200 p-5 cursor-pointer transition hover:border-secondary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/40"
+                  >
                     {isEditing ? (
                       <div className="space-y-4">
                         <input
@@ -378,14 +393,26 @@ export default function AccountPageClient() {
                           </div>
                         </div>
                         <div className="mt-5 flex flex-wrap gap-3">
-                          <Link
-                            href={`/map?report=${report.id}`}
-                            className="rounded-lg bg-secondary px-4 py-2 font-medium text-white transition hover:bg-secondary/90"
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              startEditingReport(report)
+                            }}
+                            className="rounded-lg border border-gray-300 px-4 py-2 font-medium text-gray-700"
                           >
-                            Prikaži na mapi
-                          </Link>
-                          <button type="button" onClick={() => startEditingReport(report)} className="rounded-lg border border-gray-300 px-4 py-2 font-medium text-gray-700">Uredi</button>
-                          <button type="button" onClick={() => deleteReport(report.id)} className="rounded-lg border border-red-300 px-4 py-2 font-medium text-red-700">Obriši</button>
+                            Uredi
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              deleteReport(report.id)
+                            }}
+                            className="rounded-lg border border-red-300 px-4 py-2 font-medium text-red-700"
+                          >
+                            Obriši
+                          </button>
                         </div>
                       </>
                     )}
