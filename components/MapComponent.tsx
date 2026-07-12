@@ -502,7 +502,6 @@ export default function MapComponent({
 
     isSwitchingPopupRef.current = true
     marker.openPopup()
-    ensurePopupVisible(map, marker.getPopup() ?? new L.Popup(), isFullscreenActiveRef.current ? 180 : 320)
   }, [focusedReportId, focusedReportNonce, reports])
 
   useEffect(() => {
