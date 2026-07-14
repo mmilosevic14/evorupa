@@ -21,6 +21,8 @@
     "generate:brand-assets": "node scripts/generate-og-image.js",
     "supabase:apply-schema": "powershell -ExecutionPolicy Bypass -File scripts/apply-supabase-schema.ps1",
     "supabase:apply-settlements": "powershell -ExecutionPolicy Bypass -File scripts/apply-serbia-settlements.ps1",
+    "supabase:audit-report-photos": "node scripts/audit-report-photos.js",
+    "supabase:cleanup-report-photos": "node scripts/audit-report-photos.js --delete-orphans",
     "supabase:build-settlements": "powershell -ExecutionPolicy Bypass -File scripts/build-serbia-settlements.ps1",
     "supabase:export-settlements-sql": "node scripts/export-settlements-sql.js",
     "supabase:import-settlements": "powershell -ExecutionPolicy Bypass -File scripts/import-settlements-json.ps1",
