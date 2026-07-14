@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { DEFAULT_REPORT_CATEGORIES, sortCategories } from '@/lib/reportMetadata'
 import { createClient } from '@/utils/supabase/client'
 import { syncUserProfile } from '@/utils/supabase/profile'
+import type { Database } from '@/lib/supabase'
 import { buildLocationTags, type ReportLocationDetails } from '@/lib/reportLocation'
 import {
   getScaledImageDimensions,
@@ -204,6 +205,10 @@ interface FormData {
   photo?: File | null
 }
 
+type SettlementOption = Pick<
+  Database['public']['Tables']['settlements']['Row'],
+  'id' | 'name' | 'municipality' | 'district' | 'region' | 'place_type' | 'latitude' | 'longitude'
+>
 type CategoryOption = {
   code: string
   label_sr: string
@@ -367,10 +372,14 @@ export default function ReportPageClient() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [user, setUser] = useState<any>(null)
+  const [pickerAllowed, setPickerAllowed] = useState(false)
   const [categoryOptions, setCategoryOptions] = useState<CategoryOption[]>(() => sortCategories(DEFAULT_REPORT_CATEGORIES))
   const [locationSource, setLocationSource] = useState<LocationSource>('default')
   const [locationDetails, setLocationDetails] = useState<ReportLocationDetails>(EMPTY_LOCATION_DETAILS)
   const [locationDetailsLoading, setLocationDetailsLoading] = useState(false)
+  const [placePickerQuery, setPlacePickerQuery] = useState('')
+  const [placePickerLoading, setPlacePickerLoading] = useState(false)
+  const [placePickerOptions, setPlacePickerOptions] = useState<SettlementOption[]>([])
   const [locationMessage, setLocationMessage] = useState(
     'Pokušaćemo da preuzmemo vašu trenutnu lokaciju. Ako ne uspe, koristi se podrazumevana lokacija u Srbiji.',
   )
@@ -394,6 +403,20 @@ export default function ReportPageClient() {
         supabase.auth.getUser(),
         supabase.from('report_categories').select('code, label_sr, description, sort_order'),
       ])
+
+      if (authUser) {
+        await syncUserProfile(supabase, authUser).catch(() => undefined)
+
+        const { data: profileRow } = await supabase
+          .from('users')
+          .select('picker_allowed')
+          .eq('id', authUser.id)
+          .maybeSingle()
+
+        setPickerAllowed(profileRow?.picker_allowed ?? false)
+      } else {
+        setPickerAllowed(false)
+      }
 
       if (categoryRows?.length) {
         setCategoryOptions(sortCategories(categoryRows))
@@ -421,6 +444,82 @@ export default function ReportPageClient() {
     )
   }, [])
 
+  useEffect(() => {
+    if (!pickerAllowed) {
+      setPlacePickerOptions([])
+      setPlacePickerLoading(false)
+      return
+    }
+
+    const trimmedQuery = placePickerQuery.trim()
+
+    if (trimmedQuery.length < 2) {
+      setPlacePickerOptions([])
+      setPlacePickerLoading(false)
+      return
+    }
+
+    let ignore = false
+    const supabase = createClient()
+
+    const loadSettlements = async () => {
+      setPlacePickerLoading(true)
+
+      try {
+        const { data, error } = await supabase
+          .from('settlements')
+          .select('id, name, municipality, district, region, place_type, latitude, longitude')
+          .or(`name.ilike.%${trimmedQuery}%,municipality.ilike.%${trimmedQuery}%`)
+          .order('name', { ascending: true })
+          .limit(8)
+
+        if (error) {
+          throw error
+        }
+
+        if (!ignore) {
+          setPlacePickerOptions((data as SettlementOption[] | null) ?? [])
+        }
+      } catch (settlementError) {
+        console.error('Greška pri pretrazi mesta:', settlementError)
+
+        if (!ignore) {
+          setPlacePickerOptions([])
+        }
+      } finally {
+        if (!ignore) {
+          setPlacePickerLoading(false)
+        }
+      }
+    }
+
+    loadSettlements().catch(() => undefined)
+
+    return () => {
+      ignore = true
+    }
+  }, [pickerAllowed, placePickerQuery])
+
+  const handleSettlementPick = (settlement: SettlementOption) => {
+    setPlacePickerQuery(
+      `${settlement.name}${settlement.municipality ? `, ${settlement.municipality}` : ''}`,
+    )
+    setPlacePickerOptions([])
+    setFormData((prev) => ({
+      ...prev,
+      latitude: settlement.latitude,
+      longitude: settlement.longitude,
+    }))
+    setLocationDetails({
+      placeName: settlement.name,
+      placeType: settlement.place_type as ReportLocationDetails['placeType'],
+      municipality: settlement.municipality,
+      district: settlement.district ?? '',
+      region: settlement.region || 'Srbija',
+    })
+    setLocationSource('default')
+    setLocationMessage('Lokacija je postavljena preko birača mesta.')
+  }
   useEffect(() => {
     let ignore = false
 
@@ -745,6 +844,45 @@ export default function ReportPageClient() {
               <strong>Lokacija:</strong> {formData.latitude.toFixed(4)}, {formData.longitude.toFixed(4)}
             </p>
             <p className="mt-2 text-sm text-gray-600">{locationMessage}</p>
+            {pickerAllowed && (
+              <div className="mt-4 rounded-lg border border-blue-200 bg-white p-4">
+                <label className="block text-sm font-medium mb-2">Brzi izbor mesta</label>
+                <input
+                  type="text"
+                  value={placePickerQuery}
+                  onChange={(e) => setPlacePickerQuery(e.target.value)}
+                  placeholder="Unesite naziv mesta ili opštine"
+                  className="w-full"
+                />
+                <p className="mt-2 text-xs text-gray-500">
+                  Pretražite naselje i postavite koordinate na centar tog mesta.
+                </p>
+                {placePickerLoading && (
+                  <p className="mt-3 text-sm text-gray-600">Pretraga mesta...</p>
+                )}
+                {!placePickerLoading && placePickerQuery.trim().length >= 2 && placePickerOptions.length === 0 && (
+                  <p className="mt-3 text-sm text-gray-600">Nema rezultata za unetu pretragu.</p>
+                )}
+                {placePickerOptions.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {placePickerOptions.map((settlement) => (
+                      <button
+                        key={settlement.id}
+                        type="button"
+                        onClick={() => handleSettlementPick(settlement)}
+                        className="block w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-left transition hover:border-secondary/40 hover:bg-white"
+                      >
+                        <span className="block font-medium text-gray-900">{settlement.name}</span>
+                        <span className="block text-sm text-gray-600">
+                          {settlement.municipality}
+                          {settlement.district ? `, ${settlement.district}` : ''}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
                 <label className="block text-sm font-medium mb-2">Mesto / naselje</label>
