@@ -84,9 +84,9 @@ function MetadataIcon({ type }: { type: 'category' | 'status' | 'location' }) {
 
 function MetadataItem({ type, label }: { type: 'category' | 'status' | 'location'; label: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 print-tag">
+    <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs font-medium text-gray-700 print-tag">
       <MetadataIcon type={type} />
-      <span>{label}</span>
+      <span className="whitespace-nowrap">{label}</span>
     </span>
   )
 }
@@ -696,11 +696,11 @@ export default function MapPageClient() {
                             </div>
                           </div>
                           <div className="text-sm text-gray-600 md:text-right print-meta">
-                            {showPlaceLine && <p><strong>Mesto:</strong> {getReportPlaceLabel(report)}</p>}
-                            {showMunicipalityLine && <p><strong>Opština:</strong> {location.municipality}</p>}
-                            {showDistrictLine && <p><strong>Okrug:</strong> {location.district}</p>}
-                            {getVisibleAuthorName(report, authorNames) && <p><strong>Autor:</strong> {getVisibleAuthorName(report, authorNames)}</p>}
-                            <p className="inline-flex items-center gap-1.5"><MetadataIcon type="location" /><span><strong>Koordinate:</strong> {report.latitude.toFixed(4)}, {report.longitude.toFixed(4)}</span></p>
+                            {showPlaceLine && <p className="whitespace-nowrap"><strong>Mesto:</strong> {getReportPlaceLabel(report)}</p>}
+                            {showMunicipalityLine && <p className="whitespace-nowrap"><strong>Opština:</strong> {location.municipality}</p>}
+                            {showDistrictLine && <p className="whitespace-nowrap"><strong>Okrug:</strong> {location.district}</p>}
+                            {getVisibleAuthorName(report, authorNames) && <p className="whitespace-nowrap"><strong>Autor:</strong> {getVisibleAuthorName(report, authorNames)}</p>}
+                            <p className="inline-flex items-center gap-1.5 whitespace-nowrap"><MetadataIcon type="location" /><span className="whitespace-nowrap"><strong>Koordinate:</strong> {report.latitude.toFixed(4)}, {report.longitude.toFixed(4)}</span></p>
                           </div>
                         </div>
                       </div>
@@ -816,16 +816,16 @@ export default function MapPageClient() {
                       </div>
 
                       <div className="text-sm text-gray-600 space-y-1">
-                        {showPlaceLine && <p><strong>Mesto:</strong> {getReportPlaceLabel(report)}</p>}
-                        {showMunicipalityLine && <p><strong>Opština:</strong> {location.municipality}</p>}
-                        {getVisibleAuthorName(report, authorNames) && <p><strong>Autor:</strong> {getVisibleAuthorName(report, authorNames)}</p>}
+                        {showPlaceLine && <p className="whitespace-nowrap"><strong>Mesto:</strong> {getReportPlaceLabel(report)}</p>}
+                        {showMunicipalityLine && <p className="whitespace-nowrap"><strong>Opština:</strong> {location.municipality}</p>}
+                        {getVisibleAuthorName(report, authorNames) && <p className="whitespace-nowrap"><strong>Autor:</strong> {getVisibleAuthorName(report, authorNames)}</p>}
                       </div>
                       {engagementEnabled && (
                         <div className="mt-4 flex flex-wrap items-center gap-2">
-                          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+                          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 whitespace-nowrap">
                             Glasovi: {report.upvotes ?? 0}
                           </span>
-                          <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
+                          <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 whitespace-nowrap">
                             Prioritet: {getPriorityLabel(report.upvotes)}
                           </span>
                           <button
