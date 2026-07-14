@@ -23,6 +23,8 @@ const MapComponent = dynamic(() => import('@/components/MapComponent'), {
 })
 
 const REPORTS_PAGE_SIZE = 6
+const PLACE_GROUPS_PAGE_SIZE = 6
+const OPEN_REPORTS_PAGE_SIZE = 6
 
 function normalizeValue(value: string | null | undefined) {
   return value?.trim().toLowerCase() ?? ''
@@ -114,6 +116,10 @@ export default function MapPageClient() {
   } | null>(null)
   const [reportsPage, setReportsPage] = useState(1)
   const [reportsPerPage, setReportsPerPage] = useState<number | 'all'>(REPORTS_PAGE_SIZE)
+  const [placeGroupsPage, setPlaceGroupsPage] = useState(1)
+  const [placeGroupsPerPage, setPlaceGroupsPerPage] = useState<number | 'all'>(PLACE_GROUPS_PAGE_SIZE)
+  const [openReportsPage, setOpenReportsPage] = useState(1)
+  const [openReportsPerPage, setOpenReportsPerPage] = useState<number | 'all'>(OPEN_REPORTS_PAGE_SIZE)
   const mapSectionRef = useRef<HTMLDivElement | null>(null)
   const skipPlaceResetRef = useRef(false)
   const pendingFocusRequestRef = useRef(pendingFocusRequest)
@@ -310,6 +316,72 @@ export default function MapPageClient() {
       ?? placeDropdownGroups.find((group) => group.key === selectedPlaceKey)
       ?? null
   }, [placeDropdownGroups, placeGroups, selectedPlaceKey])
+  const totalPlaceGroupPages = useMemo(() => {
+    if (placeGroupsPerPage === 'all') {
+      return 1
+    }
+
+    return Math.max(1, Math.ceil(placeGroups.length / placeGroupsPerPage))
+  }, [placeGroups.length, placeGroupsPerPage])
+  const pagedPlaceGroups = useMemo(() => {
+    if (placeGroupsPerPage === 'all') {
+      return placeGroups
+    }
+
+    const startIndex = (placeGroupsPage - 1) * placeGroupsPerPage
+
+    return placeGroups.slice(startIndex, startIndex + placeGroupsPerPage)
+  }, [placeGroups, placeGroupsPage, placeGroupsPerPage])
+  const visiblePlaceGroupsRange = useMemo(() => {
+    if (placeGroups.length === 0) {
+      return null
+    }
+
+    if (placeGroupsPerPage === 'all') {
+      return {
+        start: 1,
+        end: placeGroups.length,
+      }
+    }
+
+    const start = (placeGroupsPage - 1) * placeGroupsPerPage + 1
+    const end = Math.min(placeGroups.length, placeGroupsPage * placeGroupsPerPage)
+
+    return { start, end }
+  }, [placeGroups.length, placeGroupsPage, placeGroupsPerPage])
+  const totalOpenReportPages = useMemo(() => {
+    if (openReportsPerPage === 'all') {
+      return 1
+    }
+
+    return Math.max(1, Math.ceil(openReports.length / openReportsPerPage))
+  }, [openReports.length, openReportsPerPage])
+  const pagedOpenReports = useMemo(() => {
+    if (openReportsPerPage === 'all') {
+      return openReports
+    }
+
+    const startIndex = (openReportsPage - 1) * openReportsPerPage
+
+    return openReports.slice(startIndex, startIndex + openReportsPerPage)
+  }, [openReports, openReportsPage, openReportsPerPage])
+  const visibleOpenReportsRange = useMemo(() => {
+    if (openReports.length === 0) {
+      return null
+    }
+
+    if (openReportsPerPage === 'all') {
+      return {
+        start: 1,
+        end: openReports.length,
+      }
+    }
+
+    const start = (openReportsPage - 1) * openReportsPerPage + 1
+    const end = Math.min(openReports.length, openReportsPage * openReportsPerPage)
+
+    return { start, end }
+  }, [openReports.length, openReportsPage, openReportsPerPage])
   const totalReportPages = useMemo(() => {
     if (reportsPerPage === 'all') {
       return 1
@@ -377,6 +449,22 @@ export default function MapPageClient() {
     })
     setPendingFocusRequest(null)
   }, [pendingFocusRequest, selectedDistrictKey, selectedPlaceKey])
+
+  useEffect(() => {
+    setPlaceGroupsPage(1)
+  }, [selectedDistrictKey, placeGroupsPerPage])
+
+  useEffect(() => {
+    setPlaceGroupsPage((currentPage) => Math.min(currentPage, totalPlaceGroupPages))
+  }, [totalPlaceGroupPages])
+
+  useEffect(() => {
+    setOpenReportsPage(1)
+  }, [selectedDistrictKey, selectedPlaceKey, openReportsPerPage])
+
+  useEffect(() => {
+    setOpenReportsPage((currentPage) => Math.min(currentPage, totalOpenReportPages))
+  }, [totalOpenReportPages])
 
   useEffect(() => {
     setReportsPage(1)
@@ -599,13 +687,62 @@ export default function MapPageClient() {
 
             {!selectedPlace && !selectedDistrict && (
             <div className="mt-8 bg-white rounded-lg shadow-md p-6 no-print">
-              <h2 className="text-2xl font-bold mb-4">Pregled po mestu</h2>
+              <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold">Pregled po mestu</h2>
+                  {visiblePlaceGroupsRange && (
+                    <p className="mt-1 text-sm text-gray-600">
+                      Prikaz {visiblePlaceGroupsRange.start}-{visiblePlaceGroupsRange.end} od {placeGroups.length}
+                    </p>
+                  )}
+                </div>
+
+                {placeGroups.length > PLACE_GROUPS_PAGE_SIZE && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm text-gray-600">Prikaži:</span>
+                    <button
+                      type="button"
+                      onClick={() => setPlaceGroupsPerPage(PLACE_GROUPS_PAGE_SIZE)}
+                      className={`rounded-full px-3 py-1 text-sm font-medium transition ${
+                        placeGroupsPerPage === PLACE_GROUPS_PAGE_SIZE
+                          ? 'bg-secondary text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      6 po strani
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPlaceGroupsPerPage(PLACE_GROUPS_PAGE_SIZE * 2)}
+                      className={`rounded-full px-3 py-1 text-sm font-medium transition ${
+                        placeGroupsPerPage === PLACE_GROUPS_PAGE_SIZE * 2
+                          ? 'bg-secondary text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Prikaži više
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPlaceGroupsPerPage('all')}
+                      className={`rounded-full px-3 py-1 text-sm font-medium transition ${
+                        placeGroupsPerPage === 'all'
+                          ? 'bg-secondary text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Sve
+                    </button>
+                  </div>
+                )}
+              </div>
 
               {placeGroups.length === 0 ? (
                 <p className="text-gray-600">Još nema podataka za grupisanje po mestu.</p>
               ) : (
+                <>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {placeGroups.map((group) => (
+                  {pagedPlaceGroups.map((group) => (
                     <button
                       key={group.key}
                       type="button"
@@ -634,6 +771,32 @@ export default function MapPageClient() {
                     </button>
                   ))}
                 </div>
+                {placeGroupsPerPage !== 'all' && totalPlaceGroupPages > 1 && (
+                  <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-sm text-gray-600">
+                      Strana {placeGroupsPage} od {totalPlaceGroupPages}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setPlaceGroupsPage((currentPage) => Math.max(1, currentPage - 1))}
+                        disabled={placeGroupsPage === 1}
+                        className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Prethodna
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPlaceGroupsPage((currentPage) => Math.min(totalPlaceGroupPages, currentPage + 1))}
+                        disabled={placeGroupsPage === totalPlaceGroupPages}
+                        className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Sledeća
+                      </button>
+                    </div>
+                  </div>
+                )}
+                </>
               )}
             </div>
             )}
@@ -648,6 +811,11 @@ export default function MapPageClient() {
               <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between print-header">
                 <div>
                   <h2 className="text-2xl font-bold">Otvoreni problemi za slanje</h2>
+                  {visibleOpenReportsRange && (
+                    <p className="mt-1 text-sm text-gray-600 no-print">
+                      Prikaz {visibleOpenReportsRange.start}-{visibleOpenReportsRange.end} od {openReports.length}
+                    </p>
+                  )}
                   <p className="text-gray-600 mt-1 print-subtitle">
                     {selectedPlace
                       ? `Mesto: ${selectedPlace.label}${selectedPlace.municipality ? `, ${selectedPlace.municipality}` : ''}`
@@ -661,11 +829,51 @@ export default function MapPageClient() {
                 </p>
               </div>
 
+              {openReports.length > OPEN_REPORTS_PAGE_SIZE && (
+                <div className="mt-4 flex flex-wrap items-center gap-2 no-print">
+                  <span className="text-sm text-gray-600">Prikaži:</span>
+                  <button
+                    type="button"
+                    onClick={() => setOpenReportsPerPage(OPEN_REPORTS_PAGE_SIZE)}
+                    className={`rounded-full px-3 py-1 text-sm font-medium transition ${
+                      openReportsPerPage === OPEN_REPORTS_PAGE_SIZE
+                        ? 'bg-secondary text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    6 po strani
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setOpenReportsPerPage(OPEN_REPORTS_PAGE_SIZE * 2)}
+                    className={`rounded-full px-3 py-1 text-sm font-medium transition ${
+                      openReportsPerPage === OPEN_REPORTS_PAGE_SIZE * 2
+                        ? 'bg-secondary text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Prikaži više
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setOpenReportsPerPage('all')}
+                    className={`rounded-full px-3 py-1 text-sm font-medium transition ${
+                      openReportsPerPage === 'all'
+                        ? 'bg-secondary text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Sve
+                  </button>
+                </div>
+              )}
+
               {openReports.length === 0 ? (
                 <p className="text-gray-600 mt-4">Nema otvorenih problema za izabrano mesto.</p>
               ) : (
+                <>
                 <div className="mt-4 space-y-4">
-                  {openReports.map((report) => {
+                  {pagedOpenReports.map((report) => {
                     const location = parseReportLocation(report.tags)
                     const showPlaceLine = !selectedPlace
                     const showMunicipalityLine =
@@ -707,6 +915,32 @@ export default function MapPageClient() {
                     )
                   })}
                 </div>
+                {openReportsPerPage !== 'all' && totalOpenReportPages > 1 && (
+                  <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between no-print">
+                    <p className="text-sm text-gray-600">
+                      Strana {openReportsPage} od {totalOpenReportPages}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setOpenReportsPage((currentPage) => Math.max(1, currentPage - 1))}
+                        disabled={openReportsPage === 1}
+                        className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Prethodna
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setOpenReportsPage((currentPage) => Math.min(totalOpenReportPages, currentPage + 1))}
+                        disabled={openReportsPage === totalOpenReportPages}
+                        className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Sledeća
+                      </button>
+                    </div>
+                  </div>
+                )}
+                </>
               )}
             </div>
 
