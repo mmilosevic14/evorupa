@@ -3,6 +3,7 @@ import "./globals.css";
 import 'leaflet/dist/leaflet.css'
 import Link from "next/link";
 import AppNavLinks from '@/components/AppNavLinks'
+import PwaInstallPrompt from '@/components/PwaInstallPrompt'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://evorupa.pages.dev'),
@@ -93,6 +94,7 @@ export default function RootLayout({
             <AppNavLinks />
           </div>
         </nav>
+        <PwaInstallPrompt />
         {children}
       </body>
     </html>

@@ -9,6 +9,7 @@ import { syncUserProfile } from '@/utils/supabase/profile'
 import type { Database } from '@/lib/supabase'
 import { buildLocationTags, type ReportLocationDetails } from '@/lib/reportLocation'
 import {
+  getCenteredSquareCrop,
   getScaledImageDimensions,
   MAX_IMAGE_BYTES,
   WEBP_QUALITY,
@@ -313,10 +314,11 @@ async function readSourceBlob({ file, sourceUrl }: { file?: File; sourceUrl?: st
 async function processImageToWebp({ file, sourceUrl }: { file?: File; sourceUrl?: string }) {
   const sourceBlob = await readSourceBlob({ file, sourceUrl })
   const image = await loadImageFromBlob(sourceBlob)
-  const { width: targetWidth, height: targetHeight } = getScaledImageDimensions(
+  const { sourceX, sourceY, sourceSize } = getCenteredSquareCrop(
     image.naturalWidth,
     image.naturalHeight,
   )
+  const { width: targetWidth, height: targetHeight } = getScaledImageDimensions(sourceSize, sourceSize)
   const canvas = document.createElement('canvas')
 
   canvas.width = targetWidth
@@ -328,7 +330,17 @@ async function processImageToWebp({ file, sourceUrl }: { file?: File; sourceUrl?
     throw new Error('Pregledač ne podržava obradu slike.')
   }
 
-  context.drawImage(image, 0, 0, targetWidth, targetHeight)
+  context.drawImage(
+    image,
+    sourceX,
+    sourceY,
+    sourceSize,
+    sourceSize,
+    0,
+    0,
+    targetWidth,
+    targetHeight,
+  )
 
   const webpBlob = await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
@@ -800,7 +812,7 @@ export default function ReportPageClient() {
             <label className="block text-sm font-medium mb-2">Fotografija problema</label>
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
               <p className="text-sm text-gray-600 mb-3">
-                Možete otpremiti sliku ili uneti izvorni URL. Slika se automatski pretvara u WebP pre čuvanja u bucket-u.
+                Možete otpremiti sliku ili uneti izvorni URL. Slika se automatski centrira na kvadrat i pretvara u WebP pre čuvanja u bucket-u.
               </p>
               <input
                 type="file"
@@ -848,7 +860,7 @@ export default function ReportPageClient() {
               )}
               {formData.photo && (
                 <p className="mt-3 text-sm text-green-700">
-                  Slika je pripremljena za upload kao <strong>WebP</strong>.
+                  Slika je pripremljena za upload kao kvadratni <strong>WebP</strong>.
                 </p>
               )}
             </div>
