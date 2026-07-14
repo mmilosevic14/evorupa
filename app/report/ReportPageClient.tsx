@@ -652,10 +652,12 @@ export default function ReportPageClient() {
       }
 
       let photoUrl: string | null = null
+      let photoPath: string | null = null
+      let photoObjectId: string | null = null
 
       if (processedPhoto) {
         const fileName = `${Date.now()}.webp`
-        const filePath = `report-photos/${user.id}/${fileName}`
+        const filePath = `${user.id}/${fileName}`
 
         const { error: uploadError } = await supabase.storage
           .from('report-photos')
@@ -672,6 +674,17 @@ export default function ReportPageClient() {
           .getPublicUrl(filePath)
 
         photoUrl = data.publicUrl
+        photoPath = filePath
+
+        const { data: objectRow } = await supabase
+          .schema('storage')
+          .from('objects')
+          .select('id')
+          .eq('bucket_id', 'report-photos')
+          .eq('name', filePath)
+          .maybeSingle()
+
+        photoObjectId = objectRow?.id ?? null
       }
 
       const { error: dbError } = await supabase.from('reports').insert([
@@ -683,6 +696,8 @@ export default function ReportPageClient() {
           latitude: formData.latitude,
           longitude: formData.longitude,
           photo_url: photoUrl,
+          photo_path: photoPath,
+          photo_object_id: photoObjectId,
           status: 'pending',
           priority: null,
           tags: buildLocationTags(locationDetails),

@@ -18,6 +18,8 @@ export type Database = {
           latitude: number
           longitude: number
           photo_url: string | null
+          photo_path: string | null
+          photo_object_id: string | null
           status: 'pending' | 'in_progress' | 'resolved' | 'rejected'
           priority: string | null
           tags: string[] | null

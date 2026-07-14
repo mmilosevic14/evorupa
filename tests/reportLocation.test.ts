@@ -20,6 +20,8 @@ function createReport(overrides: Partial<Report> = {}): Report {
     latitude: overrides.latitude ?? 44.8,
     longitude: overrides.longitude ?? 20.4,
     photo_url: overrides.photo_url ?? null,
+    photo_path: overrides.photo_path ?? null,
+    photo_object_id: overrides.photo_object_id ?? null,
     status: overrides.status ?? 'pending',
     priority: overrides.priority ?? null,
     tags: overrides.tags ?? null,

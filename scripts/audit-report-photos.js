@@ -86,6 +86,14 @@ function extractStorageObjectName(photoUrl, bucketName = DEFAULT_BUCKET) {
   return decodeURIComponent(pathParts.slice(bucketIndex + 1).join('/'))
 }
 
+function getReferencedObjectName(report, bucketName = DEFAULT_BUCKET) {
+  if (report.photo_path && typeof report.photo_path === 'string') {
+    return report.photo_path
+  }
+
+  return extractStorageObjectName(report.photo_url, bucketName)
+}
+
 function buildPhotoAudit({ reports, objects, bucketName = DEFAULT_BUCKET }) {
   const referencedObjectNames = new Set()
   const missingObjects = []
@@ -93,16 +101,17 @@ function buildPhotoAudit({ reports, objects, bucketName = DEFAULT_BUCKET }) {
   const objectNameToReports = new Map()
 
   for (const report of reports) {
-    if (!report.photo_url) {
+    if (!report.photo_url && !report.photo_path) {
       continue
     }
 
-    const objectName = extractStorageObjectName(report.photo_url, bucketName)
+    const objectName = getReferencedObjectName(report, bucketName)
 
     if (!objectName) {
       malformedReports.push({
         reportId: report.id,
         photoUrl: report.photo_url,
+        photoPath: report.photo_path ?? null,
       })
       continue
     }
@@ -113,6 +122,7 @@ function buildPhotoAudit({ reports, objects, bucketName = DEFAULT_BUCKET }) {
     linkedReports.push({
       reportId: report.id,
       photoUrl: report.photo_url,
+      photoPath: report.photo_path ?? null,
     })
     objectNameToReports.set(objectName, linkedReports)
   }
@@ -162,9 +172,10 @@ async function fetchAuditData(client, bucketName) {
   const { rows: reports } = await client.query(
     `
       select id, photo_url
+           , photo_path
       from public.reports
-      where photo_url is not null
-        and btrim(photo_url) <> ''
+      where (photo_url is not null and btrim(photo_url) <> '')
+         or (photo_path is not null and btrim(photo_path) <> '')
     `,
   )
 
@@ -295,5 +306,6 @@ module.exports = {
   DEFAULT_BUCKET,
   buildPhotoAudit,
   extractStorageObjectName,
+  getReferencedObjectName,
   parseArgs,
 }

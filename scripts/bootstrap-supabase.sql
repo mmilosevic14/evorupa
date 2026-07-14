@@ -71,6 +71,8 @@ CREATE TABLE IF NOT EXISTS public.reports (
   latitude DECIMAL(10, 8) NOT NULL,
   longitude DECIMAL(11, 8) NOT NULL,
   photo_url VARCHAR(500),
+  photo_path TEXT,
+  photo_object_id UUID,
   status VARCHAR(20) NOT NULL DEFAULT 'pending',
   priority VARCHAR(20) DEFAULT 'medium',
   tags TEXT[],
@@ -107,6 +109,7 @@ CREATE INDEX IF NOT EXISTS reports_status_idx ON public.reports(status);
 CREATE INDEX IF NOT EXISTS reports_category_idx ON public.reports(category);
 CREATE INDEX IF NOT EXISTS reports_location_idx ON public.reports(latitude, longitude);
 CREATE INDEX IF NOT EXISTS reports_created_at_idx ON public.reports(created_at DESC);
+CREATE INDEX IF NOT EXISTS reports_photo_object_id_idx ON public.reports(photo_object_id);
 CREATE INDEX IF NOT EXISTS report_upvotes_user_id_idx ON public.report_upvotes(user_id);
 CREATE INDEX IF NOT EXISTS settlements_name_idx ON public.settlements(name);
 CREATE INDEX IF NOT EXISTS settlements_municipality_idx ON public.settlements(municipality);
@@ -146,6 +149,34 @@ AS $$
     ELSE 'low'
   END;
 $$;
+
+CREATE OR REPLACE FUNCTION public.list_my_orphaned_report_photos()
+RETURNS TABLE(object_id UUID, object_name TEXT)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public, storage
+AS $$
+  SELECT o.id AS object_id, o.name AS object_name
+  FROM storage.objects AS o
+  WHERE o.bucket_id = 'report-photos'
+    AND auth.uid() IS NOT NULL
+    AND (
+      (storage.foldername(o.name))[1] = auth.uid()::text
+      OR (storage.foldername(o.name))[2] = auth.uid()::text
+    )
+    AND NOT EXISTS (
+      SELECT 1
+      FROM public.reports AS r
+      WHERE r.user_id = auth.uid()
+        AND COALESCE(
+          r.photo_path,
+          NULLIF(regexp_replace(r.photo_url, '^.*/object/public/report-photos/', ''), '')
+        ) = o.name
+    )
+  ORDER BY o.name ASC;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.list_my_orphaned_report_photos() TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.set_report_priority_from_upvotes()
 RETURNS TRIGGER
