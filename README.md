@@ -175,6 +175,7 @@ docker run -p 3000:3000 evorupa
 ## 📚 Dokumentacija
 
 - [Agent operating notes](./AGENTS.md)
+- [Upgrade migration plan](./UPGRADE_MIGRATION_PLAN.md)
 - [Setup baze podataka](./SETUP_DATABASE.md)
 - [Plan razvoja](./DEVELOPMENT_PLAN.md)
 - [Početni setup](./GETTING_STARTED.md)
