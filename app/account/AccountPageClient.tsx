@@ -382,14 +382,14 @@ export default function AccountPageClient() {
                             <h3 className="text-xl font-semibold text-gray-900">{report.title}</h3>
                             <p className="mt-2 text-gray-600">{report.description}</p>
                             <div className="mt-3 space-y-1 text-sm text-gray-500">
-                              <p>Mesto: {getReportPlaceLabel(report)}</p>
-                              {location.municipality && <p>Opština: {location.municipality}</p>}
-                              {location.district && <p>Okrug: {location.district}</p>}
+                              <p className="whitespace-nowrap">Mesto: {getReportPlaceLabel(report)}</p>
+                              {location.municipality && <p className="whitespace-nowrap">Opština: {location.municipality}</p>}
+                              {location.district && <p className="whitespace-nowrap">Okrug: {location.district}</p>}
                             </div>
                           </div>
                           <div className="flex flex-col items-start gap-2 md:items-end">
-                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700">{statusLabels[report.status] ?? report.status}</span>
-                            <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">{categoryLabels[report.category] ?? report.category}</span>
+                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700 whitespace-nowrap">{statusLabels[report.status] ?? report.status}</span>
+                            <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 whitespace-nowrap">{categoryLabels[report.category] ?? report.category}</span>
                           </div>
                         </div>
                         <div className="mt-5 flex flex-wrap gap-3">

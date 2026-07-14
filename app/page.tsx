@@ -207,16 +207,16 @@ export default async function Home() {
                         <div>
                           <p className="font-semibold">{report.title}</p>
                           <p className="mt-1 text-sm text-gray-600">{report.description}</p>
-                          <p className="mt-2 text-sm text-gray-500">
+                          <p className="mt-2 text-sm text-gray-500 whitespace-nowrap">
                             Mesto: {getReportPlaceLabel(report)}
                           </p>
                           {getVisibleAuthorName(report, authorNames) && (
-                            <p className="mt-1 text-sm text-gray-500">
+                            <p className="mt-1 text-sm text-gray-500 whitespace-nowrap">
                               Autor: {getVisibleAuthorName(report, authorNames)}
                             </p>
                           )}
                         </div>
-                        <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
+                        <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700 whitespace-nowrap">
                           {statusLabels[report.status] ?? report.status}
                         </span>
                       </div>
