@@ -86,6 +86,7 @@ export type Database = {
           is_admin: boolean
           created_at: string
           updated_at: string
+          picker_allowed: boolean
         }
         Insert: Omit<Database['public']['Tables']['users']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['users']['Insert']>
