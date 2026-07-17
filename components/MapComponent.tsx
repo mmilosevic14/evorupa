@@ -15,6 +15,7 @@ const DEFAULT_MAP_CENTER: [number, number] = [44.8176, 20.4554]
 const INDIVIDUAL_MARKER_ZOOM = 13
 const DEFAULT_MAP_HEIGHT_CLASS = 'h-96'
 const EXPANDED_MAP_HEIGHT_CLASS = 'h-[clamp(28rem,78vh,720px)]'
+const FOCUSED_POPUP_OPEN_DELAY_MS = 420
 const MAP_VIEW_ANIMATION = {
   animate: true,
   duration: 0.35,
@@ -775,12 +776,6 @@ export default function MapComponent({
 
     map.on('zoomend', handleZoomChange)
 
-    if (focusedReportId) {
-      requestAnimationFrame(() => {
-        scheduleFocusedPopupOpen(focusedReportId)
-      })
-    }
-
     return () => {
       map.off('zoomend', handleZoomChange)
     }
@@ -794,11 +789,12 @@ export default function MapComponent({
       return
     }
 
-    requestAnimationFrame(() => {
+    const openFocusedPopupTimeout = window.setTimeout(() => {
       scheduleFocusedPopupOpen(focusedReportId)
-    })
+    }, FOCUSED_POPUP_OPEN_DELAY_MS)
 
     return () => {
+      window.clearTimeout(openFocusedPopupTimeout)
       clearFocusedPopupRetry()
     }
   }, [clearFocusedPopupRetry, focusedReportId, focusedReportNonce, reports, scheduleFocusedPopupOpen])

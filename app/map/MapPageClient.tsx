@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic'
 import ReportViewsTracker from '@/components/ReportViewsTracker'
 import ShareButton from '@/components/ShareButton'
 import { incrementReportViews, toggleReportUpvote } from '@/lib/reportEngagement'
+import { getPendingFocusAction, isPendingFocusReady } from '@/lib/mapFocus'
 import { buildCategoryLabelMap, buildStatusLabelMap, derivePriorityFromUpvotes, sortCategories, sortStatuses } from '@/lib/reportMetadata'
 import { buildVisibleAuthorMap, getVisibleAuthorName } from '@/lib/reportAuthors'
 import { createClient } from '@/utils/supabase/client'
@@ -444,12 +445,19 @@ export default function MapPageClient() {
       return
     }
 
-    if (selectedDistrictKey !== pendingFocusRequest.districtKey) {
+    const pendingFocusAction = getPendingFocusAction(
+      pendingFocusRequest,
+      selectedDistrictKey,
+      selectedPlaceKey,
+      selectedReports,
+    )
+
+    if (pendingFocusAction === 'select-place') {
+      setSelectedPlaceKey(pendingFocusRequest.placeKey)
       return
     }
 
-    if (selectedPlaceKey !== pendingFocusRequest.placeKey) {
-      setSelectedPlaceKey(pendingFocusRequest.placeKey)
+    if (!isPendingFocusReady(pendingFocusRequest, selectedDistrictKey, selectedPlaceKey, selectedReports)) {
       return
     }
 
@@ -459,7 +467,7 @@ export default function MapPageClient() {
     })
     setActivePopupReportId(null)
     setPendingFocusRequest(null)
-  }, [pendingFocusRequest, selectedDistrictKey, selectedPlaceKey])
+  }, [pendingFocusRequest, selectedDistrictKey, selectedPlaceKey, selectedReports])
 
   useEffect(() => {
     setPlaceGroupsPage(1)
