@@ -25,6 +25,12 @@ The app uses `@opennextjs/cloudflare` (NOT the deprecated `@cloudflare/next-on-p
 - Output: `.open-next/assets`
 - Config: `open-next.config.ts` and `wrangler.toml`
 
+## Recent Failure Pattern
+
+- The July 2026 "Cloudflare is not building new commits" incident was actually a GitHub Actions failure at `npm ci`, not a Cloudflare source-build issue.
+- Production deploys come from GitHub Actions uploading `.pages-deploy` with Wrangler, so if CI never reaches the build step, Cloudflare has nothing new to publish.
+- Local Wrangler failures on this workstation can be misleading because they may be caused by local TLS or proxy issues even while GitHub-hosted deploys are healthy.
+
 ## Critical Files
 
 - `app/map/MapPageClient.tsx` — interactive map with filters
@@ -64,6 +70,13 @@ npm run lint
 npm test
 npm run build:cf
 ```
+
+If a push does not appear in production, check in this order:
+
+1. Latest GitHub Actions run for `.github/workflows/cloudflare-pages.yml`
+2. `Install dependencies` step and uploaded `npm-debug-logs-run-*` artifact
+3. Whether the commit ever produced `.pages-deploy`
+4. Cloudflare deployment records for the same commit hash
 
 For database work:
 

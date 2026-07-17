@@ -219,6 +219,27 @@ Deployment note:
 - Native Cloudflare Git builds are not the source of truth for production.
 - Cloudflare Pages source settings may still show legacy Git metadata, but the successful production signal is the deployment record for the pushed commit hash.
 
+### Why Builds Were Broken Before
+
+The July 2026 production deploy failure was not caused by Cloudflare Pages failing to build the app from source.
+
+- The real blocker was the GitHub Actions workflow failing in `npm ci` before the Pages artifact was built.
+- Because production deploys come from GitHub Actions uploading `.pages-deploy` with Wrangler, Cloudflare had nothing new to deploy when CI stopped at dependency install.
+- Public Cloudflare project settings were misleading during diagnosis because they still showed legacy Git metadata, even though production was already driven by the GitHub Actions artifact deploy.
+- Local Wrangler commands on this workstation were also a poor primary signal because `wrangler whoami` and local deploy attempts hit a TLS or proxy-style `fetch failed` error unrelated to the GitHub-hosted CI environment.
+
+### What To Check First If It Happens Again
+
+Use this order instead of starting in the Cloudflare dashboard:
+
+1. Check the latest GitHub Actions run for `.github/workflows/cloudflare-pages.yml`.
+2. If the run failed in `Install dependencies`, download the `npm-debug-logs-run-*` artifact and inspect the captured npm debug logs.
+3. Confirm whether the failing commit ever produced `.pages-deploy`; if not, Cloudflare is downstream and not the root cause.
+4. Confirm the workflow still has Node 22, `npm ci --no-audit`, retry logic, and npm cache cleanup between attempts.
+5. Confirm `package.json` still pins the transitive `cloudflare` dependency to the known-good version used by this repo.
+6. Only after CI is green, check Cloudflare Pages deployments for the pushed commit hash on both `evorupa` and `gderupa`.
+7. If local Wrangler commands fail but GitHub Actions succeeds, treat the local machine as an environment-specific auth or TLS problem rather than a production deploy failure.
+
 Check the build status in GitHub → Actions.
 
 ### Manual Deployment
