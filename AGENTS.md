@@ -87,6 +87,17 @@ Keep these migration artifacts in mind during debugging:
 3. If reports exist but profile/email state looks wrong, check [SUPABASE_MIGRATION_TODO.md](c:/Users/mmilosev/gderupa/SUPABASE_MIGRATION_TODO.md), [scripts/prepare-user-id-remap.sql](c:/Users/mmilosev/gderupa/scripts/prepare-user-id-remap.sql), and [scripts/finalize-user-id-remap.sql](c:/Users/mmilosev/gderupa/scripts/finalize-user-id-remap.sql) before changing app logic.
 4. Ignore stale Supabase project IDs in generated output folders such as `.next`, `.open-next`, `.pages-deploy`, and `.vercel`; only source files and current env/config files are authoritative.
 
+## GTM And Consent
+
+The current Google Tag Manager integration is app-gated rather than Google Consent Mode driven.
+
+1. The active GTM container ID is `GTM-54BV9VPG`.
+2. GTM loads only after the user explicitly accepts anonymous analytics in the site consent banner.
+3. If the user rejects analytics, the GTM script and `noscript` iframe are not rendered at all.
+4. Because GTM is blocked entirely until opt-in, the GTM container does not currently need Consent Mode `default` or `update` events to respect the banner decision.
+5. Keep GTM-side setup simple unless the app is intentionally upgraded to full Google Consent Mode. Standard GA4 tags are fine, but do not add a second hardcoded GTM snippet outside the app shell.
+6. If a previously used device shows old auth or analytics behavior that a new device does not reproduce, suspect stale browser caches or an old service worker before changing source config. The app now includes a one-time client cache reset for that recovery path.
+
 ## Standard Checks
 
 Run these before handing off code changes:
