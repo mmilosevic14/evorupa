@@ -579,28 +579,31 @@ export default function MapComponent({
             }, 0)
           })
           marker.bindPopup(`
-            <div class="text-sm" style="min-width:260px;max-width:320px;">
-              <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;margin-bottom:0.75rem;padding-right:1rem;">
+            <div class="leaflet-popup-card text-sm">
+              <div class="leaflet-popup-header">
                 <span class="leaflet-popup-pill leaflet-popup-pill-split">${categoryIcon}<span>${categoryLabel}</span></span>
                 <span class="leaflet-popup-pill leaflet-popup-pill-split">${statusIcon}<span>${statusLabel}</span></span>
               </div>
               <img
                 src="${photoUrl}"
                 alt="${report.title}"
-                style="width:100%;height:128px;object-fit:contain;border-radius:0.5rem;margin-bottom:0.75rem;background:#f3f4f6;"
+                class="leaflet-popup-media"
+                style="height:128px;object-fit:contain;border-radius:0.5rem;background:#f3f4f6;"
               />
-              <h3 style="font-weight:700;margin-bottom:0.25rem;">${report.title}</h3>
-              <p style="font-size:12px;color:#4b5563;margin-bottom:0.5rem;">${report.description.substring(0, 160)}...</p>
-              <p style="font-size:12px;">
-                <strong>Koordinate:</strong>
-                <a
-                  href="${coordinateLink}"
-                  class="leaflet-popup-coordinate-link"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >${report.latitude.toFixed(5)}, ${report.longitude.toFixed(5)}</a>
-              </p>
-              <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.75rem;">
+              <div class="leaflet-popup-copy">
+                <h3 style="font-weight:700;margin-bottom:0.25rem;">${report.title}</h3>
+                <p style="font-size:12px;color:#4b5563;margin-bottom:0.5rem;">${report.description.substring(0, 160)}...</p>
+                <p style="font-size:12px;">
+                  <strong>Koordinate:</strong>
+                  <a
+                    href="${coordinateLink}"
+                    class="leaflet-popup-coordinate-link"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >${report.latitude.toFixed(5)}, ${report.longitude.toFixed(5)}</a>
+                </p>
+              </div>
+              <div class="leaflet-popup-actions">
                 <a
                   href="${shareUrl}"
                   class="leaflet-popup-action"
@@ -681,7 +684,7 @@ export default function MapComponent({
           )
         } else {
           const popupHtml = `
-            <div class="text-sm" style="min-width:280px;max-width:320px;">
+            <div class="text-sm" style="max-width:320px;">
               <h3 class="font-bold text-base" style="margin-bottom:0.25rem;">${group.label}</h3>
               ${group.municipality ? `<p class="text-xs text-gray-600" style="margin-bottom:0.25rem;">Opština/grad: ${group.municipality}</p>` : ''}
               ${group.district ? `<p class="text-xs text-gray-600" style="margin-bottom:0.5rem;">Okrug: ${group.district}</p>` : ''}
@@ -698,7 +701,7 @@ export default function MapComponent({
 
                     return `
                       <div style="border-top:1px solid #e5e7eb;padding-top:0.75rem;">
-                        <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;margin-bottom:0.5rem;padding-right:1rem;">
+                        <div class="leaflet-popup-header" style="margin-bottom:0.5rem;">
                           <span class="leaflet-popup-pill leaflet-popup-pill-split">${categoryIcon}<span>${categoryLabel}</span></span>
                           <span class="leaflet-popup-pill leaflet-popup-pill-split">${statusIcon}<span>${statusLabel}</span></span>
                         </div>
