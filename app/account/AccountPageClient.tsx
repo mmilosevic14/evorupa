@@ -24,6 +24,18 @@ type ProfileState = {
   showAuthorName: boolean
 }
 
+type PasswordState = {
+  password: string
+  confirmPassword: string
+}
+
+const PASSWORD_REQUIREMENTS = [
+  { id: 'length', label: 'Najmanje 8 karaktera', test: (value: string) => value.length >= 8 },
+  { id: 'lowercase', label: 'Najmanje jedno malo slovo', test: (value: string) => /[a-z]/.test(value) },
+  { id: 'uppercase', label: 'Najmanje jedno veliko slovo', test: (value: string) => /[A-Z]/.test(value) },
+  { id: 'number', label: 'Najmanje jedan broj', test: (value: string) => /\d/.test(value) },
+] as const
+
 type CategoryOption = {
   code: string
   label_sr: string
@@ -42,8 +54,10 @@ export default function AccountPageClient() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [savingProfile, setSavingProfile] = useState(false)
+  const [savingPassword, setSavingPassword] = useState(false)
   const [user, setUser] = useState<{ id: string } | null>(null)
   const [profile, setProfile] = useState<ProfileState>({ fullName: '', email: '', showAuthorName: false })
+  const [passwordState, setPasswordState] = useState<PasswordState>({ password: '', confirmPassword: '' })
   const [reports, setReports] = useState<Report[]>([])
   const [engagementEnabled, setEngagementEnabled] = useState(false)
   const [categoryOptions, setCategoryOptions] = useState<CategoryOption[]>(() => sortCategories(DEFAULT_REPORT_CATEGORIES))
@@ -54,6 +68,13 @@ export default function AccountPageClient() {
   const [editableReport, setEditableReport] = useState<EditableReport | null>(null)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [passwordError, setPasswordError] = useState('')
+  const [passwordSuccess, setPasswordSuccess] = useState('')
+
+  const passwordChecks = PASSWORD_REQUIREMENTS.map((requirement) => ({
+    ...requirement,
+    met: requirement.test(passwordState.password),
+  }))
 
   const handleReportCardKeyDown = (event: React.KeyboardEvent<HTMLDivElement>, reportId: string) => {
     if (event.key !== 'Enter' && event.key !== ' ') {
@@ -187,6 +208,51 @@ export default function AccountPageClient() {
     }
   }
 
+  const savePassword = async () => {
+    const trimmedPassword = passwordState.password.trim()
+
+    setPasswordError('')
+    setPasswordSuccess('')
+
+    if (!trimmedPassword) {
+      setPasswordError('Unesite novu lozinku.')
+      return
+    }
+
+    if (passwordState.password !== passwordState.confirmPassword) {
+      setPasswordError('Lozinke se ne poklapaju.')
+      return
+    }
+
+    const unmetRequirement = PASSWORD_REQUIREMENTS.find((requirement) => !requirement.test(passwordState.password))
+
+    if (unmetRequirement) {
+      setPasswordError('Lozinka ne ispunjava bezbednosne uslove.')
+      return
+    }
+
+    setSavingPassword(true)
+
+    try {
+      const supabase = createClient()
+      const { error: updatePasswordError } = await supabase.auth.updateUser({
+        password: passwordState.password,
+      })
+
+      if (updatePasswordError) {
+        throw updatePasswordError
+      }
+
+      setPasswordState({ password: '', confirmPassword: '' })
+      setPasswordSuccess('Lozinka je uspešno ažurirana.')
+    } catch (updatePasswordError) {
+      console.error(updatePasswordError)
+      setPasswordError('Neuspešno ažuriranje lozinke.')
+    } finally {
+      setSavingPassword(false)
+    }
+  }
+
   const saveReport = async () => {
     if (!editableReport) {
       return
@@ -312,6 +378,61 @@ export default function AccountPageClient() {
           >
             {savingProfile ? 'Čuvanje...' : 'Sačuvaj profil'}
           </button>
+
+          <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-6">
+            <div className="flex flex-col gap-2">
+              <h2 className="text-xl font-bold text-gray-900">Promena lozinke</h2>
+              <p className="text-sm text-gray-600">Možete postaviti ili promeniti lozinku i ako se prijavljujete preko Google-a. Tako ćete po potrebi imati i email prijavu na istom nalogu.</p>
+            </div>
+
+            {passwordError && <div className="mt-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-red-700">{passwordError}</div>}
+            {passwordSuccess && <div className="mt-4 rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-green-700">{passwordSuccess}</div>}
+
+            <div className="mt-6 grid gap-6 md:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Nova lozinka</label>
+                <input
+                  type="password"
+                  value={passwordState.password}
+                  onChange={(event) => setPasswordState((current) => ({ ...current, password: event.target.value }))}
+                  className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2"
+                  placeholder="Unesite novu lozinku"
+                  autoComplete="new-password"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Potvrdite novu lozinku</label>
+                <input
+                  type="password"
+                  value={passwordState.confirmPassword}
+                  onChange={(event) => setPasswordState((current) => ({ ...current, confirmPassword: event.target.value }))}
+                  className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2"
+                  placeholder="Ponovite novu lozinku"
+                  autoComplete="new-password"
+                />
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+              <p className="text-sm font-medium text-gray-900">Bezbednosni uslovi</p>
+              <ul className="mt-3 space-y-2 text-sm text-gray-600">
+                {passwordChecks.map((requirement) => (
+                  <li key={requirement.id} className={requirement.met ? 'text-green-700' : 'text-gray-600'}>
+                    {requirement.met ? 'Ispunjeno:' : 'Potrebno:'} {requirement.label}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <button
+              type="button"
+              onClick={savePassword}
+              disabled={savingPassword}
+              className="mt-6 rounded-lg bg-secondary px-5 py-2.5 font-medium text-white transition hover:bg-secondary/90 disabled:opacity-50"
+            >
+              {savingPassword ? 'Čuvanje...' : 'Sačuvaj lozinku'}
+            </button>
+          </div>
         </section>
 
         <section className="rounded-2xl bg-white p-8 shadow-md">
