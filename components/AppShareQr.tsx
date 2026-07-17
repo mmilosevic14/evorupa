@@ -53,12 +53,6 @@ export default function AppShareQr() {
                 text="Prijavi rupe i infrastrukturne probleme preko EvoRupa aplikacije."
                 className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
               />
-              <a
-                href={APP_URL}
-                className="rounded-full border border-white/30 px-4 py-2 text-sm font-semibold text-white transition hover:border-white hover:bg-white/10"
-              >
-                Otvori aplikaciju
-              </a>
             </div>
           </div>
 
@@ -114,12 +108,6 @@ export default function AppShareQr() {
             text="Prijavi rupe i infrastrukturne probleme preko EvoRupa aplikacije."
             className="w-full rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
           />
-          <a
-            href={APP_URL}
-            className="w-full rounded-full border border-white/30 px-4 py-2 text-center text-sm font-semibold text-white transition hover:border-white hover:bg-white/10"
-          >
-            Otvori aplikaciju
-          </a>
         </div>
       </div>
     </>
