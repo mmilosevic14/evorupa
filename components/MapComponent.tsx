@@ -582,18 +582,17 @@ export default function MapComponent({
             <div class="leaflet-popup-card text-sm">
               <div class="leaflet-popup-header">
                 <span class="leaflet-popup-pill leaflet-popup-pill-split">${categoryIcon}<span>${categoryLabel}</span></span>
-                <span class="leaflet-popup-pill leaflet-popup-pill-split">${statusIcon}<span>${statusLabel}</span></span>
+                <span class="leaflet-popup-pill leaflet-popup-pill-split leaflet-popup-pill-status">${statusIcon}<span>${statusLabel}</span></span>
               </div>
               <img
                 src="${photoUrl}"
                 alt="${report.title}"
                 class="leaflet-popup-media"
-                style="height:128px;object-fit:contain;border-radius:0.5rem;background:#f3f4f6;"
               />
               <div class="leaflet-popup-copy">
-                <h3 style="font-weight:700;margin-bottom:0.25rem;">${report.title}</h3>
-                <p style="font-size:12px;color:#4b5563;margin-bottom:0.5rem;">${report.description.substring(0, 160)}...</p>
-                <p style="font-size:12px;">
+                <h3 style="font-weight:700;">${report.title}</h3>
+                <p style="color:#4b5563;margin:0;line-height:1.15;">${report.description.substring(0, 160)}...</p>
+                <p style="margin:0;line-height:1.15;">
                   <strong>Koordinate:</strong>
                   <a
                     href="${coordinateLink}"
@@ -623,7 +622,7 @@ export default function MapComponent({
                   data-popup-close="true"
                   title="Zatvori"
                   aria-label="Zatvori"
-                  style="display:inline-flex;align-items:center;justify-content:center;border-radius:9999px;border:none;background:#e2e8f0;color:#0f172a;width:2.75rem;height:2.75rem;padding:0;font-size:22px;font-weight:800;line-height:1;cursor:pointer;margin-left:auto;flex:0 0 auto;"
+                  style="display:inline-flex;align-items:center;justify-content:center;border-radius:9999px;border:none;background:#e2e8f0;color:#0f172a;width:2.75rem;height:2.75rem;padding:0;font-size:22px;font-weight:800;line-height:1;cursor:pointer;margin-left:auto;margin-right:-0.125rem;flex:0 0 auto;"
                 >&times;</button>
               </div>
             </div>
@@ -703,15 +702,17 @@ export default function MapComponent({
                       <div style="border-top:1px solid #e5e7eb;padding-top:0.75rem;">
                         <div class="leaflet-popup-header" style="margin-bottom:0.5rem;">
                           <span class="leaflet-popup-pill leaflet-popup-pill-split">${categoryIcon}<span>${categoryLabel}</span></span>
-                          <span class="leaflet-popup-pill leaflet-popup-pill-split">${statusIcon}<span>${statusLabel}</span></span>
+                          <span class="leaflet-popup-pill leaflet-popup-pill-split leaflet-popup-pill-status">${statusIcon}<span>${statusLabel}</span></span>
                         </div>
                         <img
                           src="${photoUrl}"
                           alt="${report.title}"
-                          style="width:100%;height:128px;object-fit:contain;border-radius:0.5rem;margin-bottom:0.5rem;background:#f3f4f6;"
+                          class="leaflet-popup-media"
                         />
-                        <h4 style="font-weight:700;margin-bottom:0.25rem;">${report.title}</h4>
-                        <p style="font-size:12px;color:#4b5563;margin-bottom:0.5rem;">${report.description.substring(0, 120)}...</p>
+                        <div class="leaflet-popup-copy">
+                          <h4 style="font-weight:700;">${report.title}</h4>
+                          <p style="color:#4b5563;margin:0;line-height:1.15;">${report.description.substring(0, 120)}...</p>
+                        </div>
                         <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.75rem;">
                           <a
                             href="${shareUrl}"

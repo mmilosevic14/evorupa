@@ -82,7 +82,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  width: max-content;
+  width: 16rem;
   max-width: calc(100vw - 3rem);
 }
 
@@ -91,15 +91,14 @@ body {
   align-items: center;
   gap: 0.5rem;
   min-height: 1.5rem;
-  width: max-content;
+  box-sizing: border-box;
+  width: 100%;
   max-width: 100%;
-  padding-right: 2rem;
 }
 
 .leaflet-popup-coordinate-link {
-  display: inline-block;
+  display: inline;
   margin-left: 0.25rem;
-  padding: 0.25rem 0;
   color: #2563eb;
   font-weight: 600;
   text-decoration: underline;
@@ -125,19 +124,46 @@ body {
   flex: 0 1 auto;
 }
 
+.leaflet-popup-pill-status {
+  margin-right: 2.5rem;
+}
+
 .leaflet-popup-media,
 .leaflet-popup-copy,
 .leaflet-popup-actions {
-  width: 15rem;
+  width: 16rem;
   max-width: 100%;
 }
 
+.leaflet-popup-media {
+  aspect-ratio: 4 / 3;
+  height: auto;
+  object-fit: contain;
+  border-radius: 0.5rem;
+  background: #f3f4f6;
+}
+
 .leaflet-popup-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
   min-width: 0;
+  font-size: 12px;
+  line-height: 1.15;
 }
 
 .leaflet-popup-copy > * {
   overflow-wrap: anywhere;
+  margin: 0 !important;
+}
+
+.leaflet-popup-copy h3 {
+  font-size: 14px;
+  line-height: 1.1;
+}
+
+.leaflet-popup-copy p {
+  line-height: 1.15;
 }
 
 .leaflet-popup-actions {
