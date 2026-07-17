@@ -14,6 +14,7 @@ Use this file when opening a new chat with this folder.
 - Pagination for reported problems on the map page.
 - Automated test coverage: 19 tests across 5 test files (vitest).
 - Cloudflare Pages CI/CD via `@opennextjs/cloudflare` — builds to `.open-next/assets`.
+- Supabase database workflow is now scaffolded under `supabase/`.
 
 ## Build System
 
@@ -37,6 +38,9 @@ The app uses `@opennextjs/cloudflare` (NOT the deprecated `@cloudflare/next-on-p
 - `.github/workflows/cloudflare-pages.yml` — CI (Node 22, npm ci)
 - `open-next.config.ts`, `wrangler.toml` — Cloudflare config
 - `scripts/build-cloudflare.js` — build wrapper
+- `supabase/migrations/` — canonical Supabase schema migrations
+- `supabase/seed.sql` — lightweight local Supabase seed
+- `supabase/manual/` — one-off operational SQL
 
 ## Local Secret Files
 
@@ -48,7 +52,7 @@ Both are git-ignored and should not be committed.
 ## What is Already Automated
 
 - CI build on pull requests and pushes (type-check, lint, test, build:cf)
-- Deploy to Cloudflare Pages on push to main/master (native GitHub integration)
+- Deploy to Cloudflare Pages on push to main/master through GitHub Actions + Wrangler artifact deploy
 - Helper script for syncing Cloudflare secrets to GitHub
 
 ## First Commands in New Chat
@@ -61,9 +65,17 @@ npm test
 npm run build:cf
 ```
 
+For database work:
+
+```bash
+supabase db reset
+supabase db push
+```
+
 ## Operational Steps (Supabase + Cloudflare)
 
-1. Confirm Supabase tables/policies were applied from SETUP_DATABASE.md.
+1. Confirm pending schema work is represented in `supabase/migrations/`.
+2. Confirm the linked environment has applied pending migrations.
 2. Confirm Supabase Auth URL configuration includes deployed Cloudflare domain.
 3. Confirm GitHub secrets exist:
    - CLOUDFLARE_ACCOUNT_ID

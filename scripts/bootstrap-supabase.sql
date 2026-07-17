@@ -1,3 +1,7 @@
+-- Historical bootstrap snapshot.
+-- For normal ongoing schema work, use supabase/migrations/ as the source of truth.
+-- Keep this file for recovery or manual dashboard-only execution when needed.
+
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE IF NOT EXISTS public.users (

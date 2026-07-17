@@ -15,17 +15,28 @@ Before you start, you need:
 
 ### Create a Supabase Project
 
-1. Go to https://supabase.com
-2. Click "New Project"
+1. This repo is already migrated to Supabase project `hjbvdtaeqqlyabmklrmg`
+2. If you are provisioning a new environment, create or select the target Supabase project
 3. Select a region (EU - Frankfurt recommended for Serbia)
 4. Set a strong database password
 5. Wait 2-3 minutes for creation
 
 ### Create Database Tables
 
-1. In Supabase Dashboard, go to **SQL Editor**
-2. Copy the entire SQL from `SETUP_DATABASE.md`
-3. Run the SQL script
+Use the repo-managed Supabase scaffold as the default workflow:
+
+```bash
+supabase db reset
+supabase db push
+```
+
+Primary database sources:
+
+- `supabase/migrations/`
+- `supabase/seed.sql`
+- `supabase/manual/`
+
+Use `SETUP_DATABASE.md` only for recovery, dashboard-only execution, or historical reference.
 
 ### Create Storage Bucket
 
@@ -199,13 +210,14 @@ The CI/CD pipeline will:
 3. Run linting
 4. Run tests
 5. Build the Pages advanced-mode bundle
+6. Deploy the verified `.pages-deploy` artifact to both Cloudflare Pages projects
 
 Deployment note:
 
-- The workflow validates the build only.
-- Production deployment is handled by Cloudflare Pages' native GitHub integration.
-- Cloudflare Pages must be connected to the current repository slug `mmilosevic14/evorupa`.
-- If Cloudflare is still connected to `mmilosevic14/gderupa`, `git push origin main` can succeed while `evorupa.pages.dev` keeps serving an older build.
+- GitHub Actions is the deployment path for production.
+- The workflow deploys the built `.pages-deploy` artifact directly with Wrangler.
+- Native Cloudflare Git builds are not the source of truth for production.
+- Cloudflare Pages source settings may still show legacy Git metadata, but the successful production signal is the deployment record for the pushed commit hash.
 
 Check the build status in GitHub → Actions.
 
