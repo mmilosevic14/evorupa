@@ -4,6 +4,7 @@ import "./globals.css";
 import 'leaflet/dist/leaflet.css'
 import Link from "next/link";
 import AppNavLinks from '@/components/AppNavLinks'
+import ClientCacheReset from '@/components/ClientCacheReset'
 import ConsentManager from '@/components/ConsentManager'
 import PwaInstallPrompt from '@/components/PwaInstallPrompt'
 import { CONSENT_COOKIE_NAME, GTM_ID, parseConsentState } from '@/lib/consent'
@@ -110,6 +111,7 @@ export default async function RootLayout({
             <AppNavLinks />
           </div>
         </nav>
+        <ClientCacheReset />
         <PwaInstallPrompt />
         <ConsentManager initialConsent={initialConsent} />
         {children}
