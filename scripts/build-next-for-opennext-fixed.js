@@ -68,10 +68,16 @@ function writeJson(filePath, value) {
 
 function runNextBuild() {
   const nextCliPath = path.join(repoRoot, 'node_modules', 'next', 'dist', 'bin', 'next')
-  const command = process.platform === 'win32' ? 'cmd.exe' : 'npx'
-  const args = process.platform === 'win32'
-    ? ['/c', 'npx', '-y', 'node@22', nextCliPath, 'build']
-    : ['-y', 'node@22', nextCliPath, 'build']
+  const runningNodeMajor = Number.parseInt(process.versions.node.split('.')[0] ?? '0', 10)
+  const shouldReuseCurrentNode = runningNodeMajor === 22
+  const command = shouldReuseCurrentNode
+    ? process.execPath
+    : process.platform === 'win32'
+      ? 'npx.cmd'
+      : 'npx'
+  const args = shouldReuseCurrentNode
+    ? [nextCliPath, 'build']
+    : ['-y', '-p', 'node@22', 'node', nextCliPath, 'build']
   const buildEnv = {
     ...process.env,
     NEXT_PRIVATE_STANDALONE: 'true',

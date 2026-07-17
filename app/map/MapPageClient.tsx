@@ -485,7 +485,7 @@ export default function MapPageClient() {
     setReportsPage((currentPage) => Math.min(currentPage, totalReportPages))
   }, [totalReportPages])
 
-  const handlePlaceGroupSelect = (group: PlaceGroup) => {
+  const handlePlaceGroupSelect = useCallback((group: PlaceGroup) => {
     if (selectedDistrictKey !== 'all' && group.district) {
       const matchingDistrict = districtGroups.find((districtGroup) => districtGroup.district === group.district)
 
@@ -495,7 +495,7 @@ export default function MapPageClient() {
     }
 
     setSelectedPlaceKey(group.key)
-  }
+  }, [districtGroups, selectedDistrictKey])
 
   const handleReportCardKeyDown = (event: React.KeyboardEvent<HTMLDivElement>, report: Report) => {
     if (event.key !== 'Enter' && event.key !== ' ') {
@@ -597,7 +597,7 @@ export default function MapPageClient() {
     }
   }, [activePopupReportId, selectedReports])
 
-  const handleReportsViewed = (reportIds: string[]) => {
+  const handleReportsViewed = useCallback((reportIds: string[]) => {
     if (!engagementEnabled) {
       return
     }
@@ -607,7 +607,7 @@ export default function MapPageClient() {
     incrementReportViews(supabase, reportIds).catch((error) => {
       console.error('Error tracking popup report views:', error)
     })
-  }
+  }, [engagementEnabled])
 
   const handleUpvote = async (reportId: string) => {
     if (!engagementEnabled) {
@@ -734,6 +734,7 @@ export default function MapPageClient() {
                 onPlaceGroupSelect={handlePlaceGroupSelect}
                 onActiveReportChange={setActivePopupReportId}
                 onReportsViewed={handleReportsViewed}
+                categoryLabels={categoryLabels}
                 statusLabels={statusLabels}
               />
             </div>

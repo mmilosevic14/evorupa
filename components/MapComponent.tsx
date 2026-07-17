@@ -1,7 +1,7 @@
 'use client'
 
 import L from 'leaflet'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { getReportPhotoUrl } from '@/lib/reportMedia'
 import type { PlaceGroup } from '@/lib/reportLocation'
 import type { Report } from '@/lib/supabase'
@@ -14,11 +14,30 @@ const OSM_ATTRIBUTION =
 const DEFAULT_MAP_CENTER: [number, number] = [44.8176, 20.4554]
 const INDIVIDUAL_MARKER_ZOOM = 13
 const DEFAULT_MAP_HEIGHT_CLASS = 'h-96'
-const EXPANDED_MAP_HEIGHT_CLASS = 'h-[min(78vh,720px)]'
+const EXPANDED_MAP_HEIGHT_CLASS = 'h-[clamp(28rem,78vh,720px)]'
 const MAP_VIEW_ANIMATION = {
   animate: true,
   duration: 0.35,
   easeLinearity: 0.2,
+}
+
+function getPopupMetadataIcon(type: 'category' | 'status') {
+  if (type === 'category') {
+    return `
+      <svg aria-hidden="true" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" style="flex:0 0 auto;">
+        <path d="M2.75 4.25h10.5" />
+        <path d="M2.75 8h10.5" />
+        <path d="M2.75 11.75h6.5" />
+      </svg>
+    `
+  }
+
+  return `
+    <svg aria-hidden="true" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" style="flex:0 0 auto;">
+      <circle cx="8" cy="8" r="5.25" />
+      <path d="M8 5.25v3.1l2.15 1.4" />
+    </svg>
+  `
 }
 
 function getCoordinateMapLink(latitude: number, longitude: number) {
@@ -208,6 +227,7 @@ export default function MapComponent({
   onPlaceGroupSelect,
   onActiveReportChange,
   onReportsViewed,
+  categoryLabels,
   statusLabels,
 }: {
   reports?: Report[]
@@ -217,6 +237,7 @@ export default function MapComponent({
   onPlaceGroupSelect?: (group: PlaceGroup) => void
   onActiveReportChange?: (reportId: string | null) => void
   onReportsViewed?: (reportIds: string[]) => void
+  categoryLabels?: Record<string, string>
   statusLabels?: Record<string, string>
 }) {
   const [isPopupExpanded, setIsPopupExpanded] = useState(false)
@@ -232,6 +253,47 @@ export default function MapComponent({
   const isSwitchingPopupRef = useRef(false)
   const activePopupRef = useRef<L.Popup | null>(null)
   const pendingViewportActionRef = useRef<'popup-open' | 'popup-close' | null>(null)
+  const focusedPopupRetryTimeoutRef = useRef<number | null>(null)
+
+  const clearFocusedPopupRetry = useCallback(() => {
+    if (focusedPopupRetryTimeoutRef.current !== null) {
+      window.clearTimeout(focusedPopupRetryTimeoutRef.current)
+      focusedPopupRetryTimeoutRef.current = null
+    }
+  }, [])
+
+  const scheduleFocusedPopupOpen = useCallback((reportId: string, attempt = 0) => {
+    const marker = reportMarkersRef.current.get(reportId)
+
+    if (!marker) {
+      if (attempt >= 8) {
+        return
+      }
+
+      clearFocusedPopupRetry()
+      focusedPopupRetryTimeoutRef.current = window.setTimeout(() => {
+        scheduleFocusedPopupOpen(reportId, attempt + 1)
+      }, 180)
+      return
+    }
+
+    isSwitchingPopupRef.current = true
+    marker.openPopup()
+
+    if (marker.isPopupOpen()) {
+      clearFocusedPopupRetry()
+      return
+    }
+
+    if (attempt >= 8) {
+      return
+    }
+
+    clearFocusedPopupRetry()
+    focusedPopupRetryTimeoutRef.current = window.setTimeout(() => {
+      scheduleFocusedPopupOpen(reportId, attempt + 1)
+    }, 240)
+  }, [clearFocusedPopupRetry])
 
   useEffect(() => {
     const container = containerRef.current
@@ -324,16 +386,30 @@ export default function MapComponent({
     const handlePopupClose = () => {
       activePopupRef.current = null
 
+      const finishPopupClose = () => {
+        if (!isFullscreenActiveRef.current) {
+          pendingViewportActionRef.current = 'popup-close'
+          setIsPopupExpanded(false)
+        } else {
+          ensureActiveMarkersVisible(map, markersLayerRef.current)
+        }
+      }
+
       if (isSwitchingPopupRef.current) {
+        window.setTimeout(() => {
+          const mapWithPopup = map as L.Map & { _popup?: L.Popup | null }
+
+          if (mapWithPopup._popup?.isOpen() || activePopupRef.current) {
+            return
+          }
+
+          isSwitchingPopupRef.current = false
+          finishPopupClose()
+        }, 0)
         return
       }
 
-      if (!isFullscreenActiveRef.current) {
-        pendingViewportActionRef.current = 'popup-close'
-        setIsPopupExpanded(false)
-      } else {
-        ensureActiveMarkersVisible(map, markersLayerRef.current)
-      }
+      finishPopupClose()
     }
 
     const handlePopupShareAction = async (event: MouseEvent) => {
@@ -344,6 +420,21 @@ export default function MapComponent({
       }
 
       const shareButton = target.closest<HTMLElement>('[data-report-share-url]')
+      const closeButton = target.closest<HTMLElement>('[data-popup-close]')
+
+      if (closeButton) {
+        event.preventDefault()
+        event.stopPropagation()
+        isSwitchingPopupRef.current = false
+
+        if (activePopupRef.current) {
+          map.closePopup(activePopupRef.current)
+          return
+        }
+
+        map.closePopup()
+        return
+      }
 
       if (!shareButton) {
         return
@@ -422,10 +513,11 @@ export default function MapComponent({
       fullscreenButtonRef.current = null
       activePopupRef.current = null
       pendingViewportActionRef.current = null
+      clearFocusedPopupRetry()
       map.remove()
       mapRef.current = null
     }
-  }, [])
+  }, [clearFocusedPopupRetry])
 
   useEffect(() => {
     const map = mapRef.current
@@ -470,15 +562,27 @@ export default function MapComponent({
       if (shouldShowIndividualReports) {
         reports.forEach((report) => {
           const photoUrl = getReportPhotoUrl(report.photo_url)
+          const categoryLabel = categoryLabels?.[report.category] ?? report.category
+          const statusLabel = statusLabels?.[report.status] ?? report.status
+          const categoryIcon = getPopupMetadataIcon('category')
+          const statusIcon = getPopupMetadataIcon('status')
           const coordinateLink = getCoordinateMapLink(report.latitude, report.longitude)
           const shareUrl = getReportShareUrl(report.id)
           const marker = L.marker([report.latitude, report.longitude])
           marker.on('click', () => {
             const mapWithPopup = map as L.Map & { _popup?: L.Popup | null }
             isSwitchingPopupRef.current = Boolean(mapWithPopup._popup?.isOpen())
+            clearFocusedPopupRetry()
+            focusedPopupRetryTimeoutRef.current = window.setTimeout(() => {
+              scheduleFocusedPopupOpen(report.id)
+            }, 0)
           })
           marker.bindPopup(`
-            <div class="text-sm" style="min-width:260px;max-width:320px;padding-right:1.5rem;">
+            <div class="text-sm" style="min-width:260px;max-width:320px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;margin-bottom:0.75rem;padding-right:1rem;">
+                <span class="leaflet-popup-pill leaflet-popup-pill-split">${categoryIcon}<span>${categoryLabel}</span></span>
+                <span class="leaflet-popup-pill leaflet-popup-pill-split">${statusIcon}<span>${statusLabel}</span></span>
+              </div>
               <img
                 src="${photoUrl}"
                 alt="${report.title}"
@@ -486,7 +590,6 @@ export default function MapComponent({
               />
               <h3 style="font-weight:700;margin-bottom:0.25rem;">${report.title}</h3>
               <p style="font-size:12px;color:#4b5563;margin-bottom:0.5rem;">${report.description.substring(0, 160)}...</p>
-              <p style="font-size:12px;margin-bottom:0.25rem;"><strong>Status:</strong> ${statusLabels?.[report.status] ?? report.status}</p>
               <p style="font-size:12px;">
                 <strong>Koordinate:</strong>
                 <a
@@ -499,15 +602,25 @@ export default function MapComponent({
               <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.75rem;">
                 <a
                   href="${shareUrl}"
+                  class="leaflet-popup-action"
                   target="_blank"
                   rel="noopener noreferrer"
                   style="display:inline-flex;align-items:center;justify-content:center;border-radius:9999px;background:#e2e8f0;color:#0f172a;padding:0.4rem 0.75rem;font-size:12px;font-weight:600;text-decoration:none;"
                 >Otvori prijavu</a>
                 <button
                   type="button"
+                  class="leaflet-popup-action"
                   data-report-share-url="${shareUrl}"
                   style="display:inline-flex;align-items:center;justify-content:center;border-radius:9999px;border:none;background:#dbeafe;color:#1d4ed8;padding:0.4rem 0.75rem;font-size:12px;font-weight:600;cursor:pointer;"
                 >Podeli link</button>
+                <button
+                  type="button"
+                  class="leaflet-popup-close-chip"
+                  data-popup-close="true"
+                  title="Zatvori"
+                  aria-label="Zatvori"
+                  style="display:inline-flex;align-items:center;justify-content:center;border-radius:9999px;border:none;background:#e2e8f0;color:#0f172a;width:2.75rem;height:2.75rem;padding:0;font-size:22px;font-weight:800;line-height:1;cursor:pointer;margin-left:auto;flex:0 0 auto;"
+                >&times;</button>
               </div>
             </div>
           `)
@@ -576,10 +689,18 @@ export default function MapComponent({
                 ${group.reports
                   .map((report) => {
                     const photoUrl = getReportPhotoUrl(report.photo_url)
+                    const categoryLabel = categoryLabels?.[report.category] ?? report.category
+                    const statusLabel = statusLabels?.[report.status] ?? report.status
+                    const categoryIcon = getPopupMetadataIcon('category')
+                    const statusIcon = getPopupMetadataIcon('status')
                     const shareUrl = getReportShareUrl(report.id)
 
                     return `
                       <div style="border-top:1px solid #e5e7eb;padding-top:0.75rem;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;margin-bottom:0.5rem;padding-right:1rem;">
+                          <span class="leaflet-popup-pill leaflet-popup-pill-split">${categoryIcon}<span>${categoryLabel}</span></span>
+                          <span class="leaflet-popup-pill leaflet-popup-pill-split">${statusIcon}<span>${statusLabel}</span></span>
+                        </div>
                         <img
                           src="${photoUrl}"
                           alt="${report.title}"
@@ -587,16 +708,17 @@ export default function MapComponent({
                         />
                         <h4 style="font-weight:700;margin-bottom:0.25rem;">${report.title}</h4>
                         <p style="font-size:12px;color:#4b5563;margin-bottom:0.5rem;">${report.description.substring(0, 120)}...</p>
-                        <p style="font-size:12px;"><strong>Status:</strong> ${statusLabels?.[report.status] ?? report.status}</p>
                         <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.75rem;">
                           <a
                             href="${shareUrl}"
+                            class="leaflet-popup-action"
                             target="_blank"
                             rel="noopener noreferrer"
                             style="display:inline-flex;align-items:center;justify-content:center;border-radius:9999px;background:#e2e8f0;color:#0f172a;padding:0.4rem 0.75rem;font-size:12px;font-weight:600;text-decoration:none;"
                           >Otvori prijavu</a>
                           <button
                             type="button"
+                            class="leaflet-popup-action"
                             data-report-share-url="${shareUrl}"
                             style="display:inline-flex;align-items:center;justify-content:center;border-radius:9999px;border:none;background:#dbeafe;color:#1d4ed8;padding:0.4rem 0.75rem;font-size:12px;font-weight:600;cursor:pointer;"
                           >Podeli link</button>
@@ -653,36 +775,33 @@ export default function MapComponent({
 
     map.on('zoomend', handleZoomChange)
 
+    if (focusedReportId) {
+      requestAnimationFrame(() => {
+        scheduleFocusedPopupOpen(focusedReportId)
+      })
+    }
+
     return () => {
       map.off('zoomend', handleZoomChange)
     }
-  }, [onActiveReportChange, onPlaceGroupSelect, onReportsViewed, reports, selectedDistrict, statusLabels])
+  }, [categoryLabels, clearFocusedPopupRetry, focusedReportId, focusedReportNonce, onActiveReportChange, onPlaceGroupSelect, onReportsViewed, reports, scheduleFocusedPopupOpen, selectedDistrict, statusLabels])
 
   useEffect(() => {
     const map = mapRef.current
 
     if (!map || !focusedReportId) {
+      clearFocusedPopupRetry()
       return
     }
 
-    const openFocusedMarkerPopup = () => {
-      const marker = reportMarkersRef.current.get(focusedReportId)
-
-      if (!marker) {
-        return
-      }
-
-      isSwitchingPopupRef.current = true
-      marker.openPopup()
-    }
-
-    requestAnimationFrame(openFocusedMarkerPopup)
-    const retryAfterFitTimeout = window.setTimeout(openFocusedMarkerPopup, 420)
+    requestAnimationFrame(() => {
+      scheduleFocusedPopupOpen(focusedReportId)
+    })
 
     return () => {
-      window.clearTimeout(retryAfterFitTimeout)
+      clearFocusedPopupRetry()
     }
-  }, [focusedReportId, focusedReportNonce, reports])
+  }, [clearFocusedPopupRetry, focusedReportId, focusedReportNonce, reports, scheduleFocusedPopupOpen])
 
   useEffect(() => {
     const map = mapRef.current
