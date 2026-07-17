@@ -23,10 +23,18 @@ Evo korak-po-korak instrukcija za pokretanje projekta:
 
 ## Korak 3: Postavi Supabase Bazu Podataka
 
-1. U Supabase dashboard, idi na: **SQL Editor**
-2. Otvori novi query i kopira ceo SQL kod iz `SETUP_DATABASE.md`
-3. Uradi **Run** ili Ctrl+Enter
-4. Proveri da nema greške
+Repo sada ima `supabase/` scaffold za bazu.
+
+Preporučeni tok rada:
+
+```bash
+supabase db reset
+supabase db push
+```
+
+To koristi migracije iz `supabase/migrations/` i lokalni seed iz `supabase/seed.sql`.
+
+Ako radiš recovery kroz Dashboard umesto CLI-ja, pogledaj `SETUP_DATABASE.md` i `supabase/README.md`.
 
 ## Korak 4: Kreiraj `.env.local` fajl
 
@@ -83,10 +91,10 @@ Ako vidiš grešku, proveri:
 # 1. Dashboard → SQL Editor → New query
 # 2. Kopira:
 
-SELECT * FROM categories;
+SELECT * FROM report_categories;
 ```
 
-Trebalo bi da vidis 7 kategorija ako je baza pravilno postavljena.
+Trebalo bi da vidiš kategorije prijava ako je baza pravilno postavljena.
 
 ## 📋 Sledeći koraci za razvoj
 
@@ -122,7 +130,7 @@ A: Kreiraj bucket za slike:
 5. Create
 
 ### Q: Real-time ne radi
-A: Proverite RLS policies u SETUP_DATABASE.md. Trebalo bi da budete aplikovane.
+A: Proveri da li su migracije iz `supabase/migrations/` primenjene i da li su RLS policies aktivne.
 
 ### Q: Aplikacija je spora
 A: Prvo pokretanja će biti spora dok se sve ne cache-uje. Drugi put bi trebalo da bude brža.
@@ -191,7 +199,7 @@ npm install
 ## ✅ Checklist
 
 - [ ] Supabase account kreiran
-- [ ] Baza podataka postavljena
+- [ ] Migracije iz `supabase/migrations/` primenjene
 - [ ] `.env.local` fajl kreiran
 - [ ] `npm install` završeno
 - [ ] `npm run dev` pokrenut

@@ -44,8 +44,8 @@ npm install
 ```
 
 ### 3. Konfiguracija Supabase
-1. Idi na https://supabase.com i kreiraj nov projekat
-2. Preuzmi `SUPABASE_URL` i `SUPABASE_PUBLISHABLE_KEY` iz projekta
+1. Ovaj repo je već migriran na Supabase projekat `hjbvdtaeqqlyabmklrmg`
+2. Ako postavljaš novi environment, preuzmi `SUPABASE_URL` i `SUPABASE_PUBLISHABLE_KEY` iz projekta
 3. Kreiraj `.env.local` na osnovu `.env.example`:
 ```bash
 cp .env.example .env.local
@@ -57,7 +57,15 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
 ```
 
 ### 4. Postavljanje baze podataka
-Pogledaj `SETUP_DATABASE.md` za SQL skripte
+Repo sada koristi `supabase/` scaffold kao glavni workflow za bazu.
+
+Tipičan tok rada:
+```bash
+supabase db reset
+supabase db push
+```
+
+Pogledaj `supabase/README.md` za strukturu i `SETUP_DATABASE.md` za recovery ili ručne operativne korake.
 
 ### 5. Pokretanje aplikacije
 ```bash
@@ -87,11 +95,16 @@ evorupa/
 
 ## 🗄️ Baza podataka
 
+Primarni DB fajlovi sada su:
+- `supabase/migrations/` - verzionisane schema migracije
+- `supabase/seed.sql` - mali lokalni seed
+- `supabase/manual/` - jednokratni operativni SQL
+
 ### Tabele:
 - `users` - Korisnici aplikacije
 - `reports` - Prijave problema
-- `statuses` - Status prijava
-- `categories` - Kategorije problema
+- `report_statuses` - Status prijava
+- `report_categories` - Kategorije problema
 
 Vidi `SETUP_DATABASE.md` za detaljnu dokumentaciju
 
@@ -176,6 +189,7 @@ docker run -p 3000:3000 evorupa
 
 - [Agent operating notes](./AGENTS.md)
 - [Upgrade migration plan](./UPGRADE_MIGRATION_PLAN.md)
+- [Supabase scaffold](./supabase/README.md)
 - [Setup baze podataka](./SETUP_DATABASE.md)
 - [Plan razvoja](./DEVELOPMENT_PLAN.md)
 - [Početni setup](./GETTING_STARTED.md)

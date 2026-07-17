@@ -6,6 +6,22 @@
 
 Your project now has complete Supabase integration:
 
+### Database Source Of Truth
+
+Database workflow now lives under `supabase/`:
+
+1. `supabase/migrations/` contains canonical schema migrations.
+2. `supabase/seed.sql` contains lightweight local seed data.
+3. `supabase/manual/` contains one-off operational SQL that should not auto-run everywhere.
+
+Recommended workflow:
+
+```bash
+supabase migration new describe_change
+supabase db reset
+supabase db push
+```
+
 ### Files Created/Modified
 
 1. **`.env.local`** - Your Supabase credentials (already added)
@@ -197,18 +213,21 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
 
 ## 📋 Database Schema Status
 
-Next, you need to create tables in Supabase. Run the SQL from **SETUP_DATABASE.md** in:
-1. Supabase Dashboard → SQL Editor
-2. New Query
-3. Paste SQL
-4. Run
+The project has already been migrated. Going forward, treat `supabase/migrations/` as the canonical schema source.
 
-Tables to create:
+Use this order:
+1. Add or edit migrations under `supabase/migrations/`
+2. Use `supabase db reset` locally for a clean rebuild
+3. Use `supabase db push` to apply pending migrations to the linked environment
+4. Use `supabase/manual/` only for one-off operational jobs such as the user-id remap flow
+
+Core scaffold-managed tables:
 - `users` - User profiles
 - `reports` - Infrastructure reports
-- `comments` - Comments on reports
-- `votes` - Upvotes on reports
-- `updates` - Status updates
+- `report_categories` - Report categories
+- `report_statuses` - Report statuses
+- `report_upvotes` - Upvotes
+- `settlements` - Settlement lookup data
 
 ---
 
@@ -222,7 +241,7 @@ Tables to create:
 - [ ] Can sign up a test user
 - [ ] User appears in Supabase dashboard
 - [ ] Can login at http://localhost:3000/auth/login
-- [ ] SQL tables created (from SETUP_DATABASE.md)
+- [ ] Pending scaffold migrations applied
 - [ ] Can fetch reports from database
 
 ---
@@ -237,4 +256,4 @@ Tables to create:
 ---
 
 **Status:** 🟢 Supabase integration complete  
-**Next:** Create database tables and test authentication
+**Next:** Keep schema changes in `supabase/migrations` and use CLI push/reset for the normal workflow

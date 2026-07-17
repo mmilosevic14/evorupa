@@ -1,5 +1,25 @@
 # EvoRupa - Supabase Setup Vodič
 
+## Napomena o novom toku rada
+
+Ovaj projekat je već migriran i sada koristi `supabase/` scaffold kao glavni izvor istine za bazu.
+
+To znači:
+1. Nove schema izmene idu u `supabase/migrations/`
+2. Mali lokalni seed je u `supabase/seed.sql`
+3. Jednokratni operativni SQL je u `supabase/manual/`
+4. Stari `scripts/*.sql` fajlovi ostaju korisni kao istorijski ili migracioni pomoćni fajlovi, ali nisu više primarni workflow za nove izmene
+
+Preporučeni workflow:
+
+```bash
+supabase migration new opis_promene
+supabase db reset
+supabase db push
+```
+
+Ako radiš ručnu proveru migriranog projekta ili recovery kroz Dashboard, koristi ovaj dokument kao referencu šta schema treba da sadrži.
+
 ## 1. Kreiraj Supabase Projekat
 
 1. Idi na https://supabase.com
@@ -21,6 +41,13 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxx...
 ```
 
 ## 3. Kreiraj baze podataka
+
+Ako koristiš Supabase CLI, nemoj ručno kopirati svaki SQL blok iz ovog dokumenta kao standardni workflow. Umesto toga, primeni migracije iz `supabase/migrations/`.
+
+Ručno lepljenje SQL-a u Dashboard ima smisla samo kada:
+1. radiš recovery na projektu gde CLI nije dostupan
+2. proveravaš istorijsku strukturu
+3. izvršavaš jednokratni operativni SQL iz `supabase/manual/`
 
 ### 3.1 Tabela: users
 ```sql
