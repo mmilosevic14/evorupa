@@ -117,7 +117,6 @@ export default function LoginPageClient() {
           >
             {showEmailLogin ? 'Sakrij email prijavu' : 'Use an email'}
           </button>
-          <p className="mt-1 text-xs text-gray-500">Samo za administratore</p>
         </div>
 
         {showEmailLogin && (
