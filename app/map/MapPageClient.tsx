@@ -895,12 +895,24 @@ export default function MapPageClient() {
                         className="border border-gray-200 rounded-lg p-4 print-card print-item cursor-pointer transition hover:border-secondary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/40"
                       >
                         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between print-item-layout">
-                          <div>
+                          <div className="flex flex-1 flex-col gap-4 sm:flex-row sm:items-start">
+                            <div className="relative h-32 w-full shrink-0 overflow-hidden rounded-lg bg-gray-100 sm:w-40">
+                              <Image
+                                src={getReportPhotoUrl(report.photo_url)}
+                                alt={report.title}
+                                fill
+                                unoptimized
+                                sizes="(max-width: 640px) 100vw, 160px"
+                                className="object-cover"
+                              />
+                            </div>
+                            <div>
                             <h3 className="font-bold text-lg">{report.title}</h3>
                             <p className="text-sm text-gray-600 mt-1 print-description">{report.description}</p>
                             <div className="mt-3 flex flex-wrap gap-3 print-tags">
                               <MetadataItem type="category" label={categoryLabels[report.category] ?? getCategoryLabel(report.category)} />
                               <MetadataItem type="status" label={statusLabels[report.status] ?? getStatusLabel(report.status)} />
+                            </div>
                             </div>
                           </div>
                           <div className="text-sm text-gray-600 md:text-right print-meta">

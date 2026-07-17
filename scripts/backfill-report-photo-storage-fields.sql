@@ -42,7 +42,9 @@ FROM (
     AND btrim(report_rows.photo_url) <> ''
     AND report_rows.photo_object_id IS NULL
 ) AS matched
-WHERE reports.id = matched.report_id;WITH normalized_reports AS (
+WHERE reports.id = matched.report_id;
+
+WITH normalized_reports AS (
   SELECT
     r.id,
     NULLIF(regexp_replace(r.photo_url, '^.*/object/public/report-photos/', ''), '') AS derived_photo_path

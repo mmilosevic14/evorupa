@@ -1,5 +1,7 @@
 # EvoRupa - Deploy Now (No Waiting!)
 
+> Historical note: this document predates the July 2026 Supabase migration. If deployment or auth behavior looks inconsistent, verify current project settings against [AGENTS.md](c:/Users/mmilosev/gderupa/AGENTS.md) and [SUPABASE_MIGRATION_TODO.md](c:/Users/mmilosev/gderupa/SUPABASE_MIGRATION_TODO.md).
+
 Your app is ready to deploy. Skip the local npm install - let's use the fast cloud path.
 
 ---
@@ -55,9 +57,9 @@ git push -u origin main
    - Root directory: `/`
 7. **Environment variables** (add these):
    - Key: `NEXT_PUBLIC_SUPABASE_URL`
-   - Value: `https://wqnrywhafxutgginzbvk.supabase.co`
+   - Value: `https://hjbvdtaeqqlyabmklrmg.supabase.co`
    - Key: `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`  
-   - Value: `sb_publishable_VND7l9H4nAxQvlubQQ_hNQ_GbwIZYdK`
+   - Value: current publishable key from `.env.local`
 8. Click **Save and Deploy**
 
 ---

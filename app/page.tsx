@@ -1,8 +1,10 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@supabase/supabase-js'
 import ReportViewsTracker from '@/components/ReportViewsTracker'
 import { buildVisibleAuthorMap, getVisibleAuthorName } from '@/lib/reportAuthors'
 import { buildStatusLabelMap, sortStatuses } from '@/lib/reportMetadata'
+import { getReportPhotoUrl } from '@/lib/reportMedia'
 import { getSupabaseConfig } from '@/lib/supabaseConfig'
 import { getReportPlaceLabel, groupReportsByPlace, isOpenReport } from '@/lib/reportLocation'
 import type { Report } from '@/lib/supabase'
@@ -203,8 +205,19 @@ export default async function Home() {
                       href={`/map?report=${report.id}`}
                       className="block rounded-xl border border-gray-200 p-4 transition hover:border-secondary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/40"
                     >
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="flex flex-1 flex-col gap-4 sm:flex-row sm:items-start">
+                          <div className="relative h-28 w-full shrink-0 overflow-hidden rounded-lg bg-gray-100 sm:w-36">
+                            <Image
+                              src={getReportPhotoUrl(report.photo_url)}
+                              alt={report.title}
+                              fill
+                              unoptimized
+                              sizes="(max-width: 640px) 100vw, 144px"
+                              className="object-cover"
+                            />
+                          </div>
+                          <div>
                           <p className="font-semibold">{report.title}</p>
                           <p className="mt-1 text-sm text-gray-600">{report.description}</p>
                           <p className="mt-2 text-sm text-gray-500 whitespace-nowrap">
@@ -215,6 +228,7 @@ export default async function Home() {
                               Autor: {getVisibleAuthorName(report, authorNames)}
                             </p>
                           )}
+                          </div>
                         </div>
                         <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700 whitespace-nowrap">
                           {statusLabels[report.status] ?? report.status}

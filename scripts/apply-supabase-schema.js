@@ -6,6 +6,31 @@ const repoRoot = path.resolve(__dirname, '..')
 const envFile = path.join(repoRoot, '.env.local')
 const schemaFile = path.join(__dirname, 'bootstrap-supabase.sql')
 
+function getDirectDatabaseHost() {
+  const projectUrl =
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    process.env.SUPABASE_URL ||
+    process.env.SUPABASE_SOURCE_URL ||
+    process.env.SUPABASE_TARGET_URL
+
+  if (!projectUrl) {
+    return null
+  }
+
+  try {
+    const hostname = new URL(projectUrl).hostname
+    const hostParts = hostname.split('.')
+
+    if (hostParts.length >= 3 && hostParts.slice(1).join('.') === 'supabase.co') {
+      return `db.${hostParts[0]}.supabase.co`
+    }
+  } catch {
+    return null
+  }
+
+  return null
+}
+
 if (fs.existsSync(envFile)) {
   const envLines = fs.readFileSync(envFile, 'utf8').split(/\r?\n/)
 
@@ -45,7 +70,11 @@ let databaseUrl =
 
 if (!databaseUrl && process.env.SUPABASE_DB_PASSWORD) {
   const escapedPassword = encodeURIComponent(process.env.SUPABASE_DB_PASSWORD)
-  databaseUrl = `postgresql://postgres:${escapedPassword}@db.wqnrywhafxutgginzbvk.supabase.co:5432/postgres`
+  const directHost = getDirectDatabaseHost()
+
+  if (directHost) {
+    databaseUrl = `postgresql://postgres:${escapedPassword}@${directHost}:5432/postgres`
+  }
 }
 
 if (!databaseUrl) {

@@ -16,6 +16,7 @@ build
 .open-next
 .pages-deploy
 .wrangler
+tmp
 
 # Misc
 .DS_Store

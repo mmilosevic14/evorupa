@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
+import { cookies } from 'next/headers'
 import "./globals.css";
 import 'leaflet/dist/leaflet.css'
 import Link from "next/link";
 import AppNavLinks from '@/components/AppNavLinks'
+import ConsentManager from '@/components/ConsentManager'
 import PwaInstallPrompt from '@/components/PwaInstallPrompt'
+import { CONSENT_COOKIE_NAME, GTM_ID, parseConsentState } from '@/lib/consent'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://evorupa.pages.dev'),
@@ -75,17 +78,30 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const cookieStore = await cookies()
+  const initialConsent = parseConsentState(cookieStore.get(CONSENT_COOKIE_NAME)?.value)
+
   return (
     <html lang="sr">
       <head>
         <meta property="og:logo" content="https://evorupa.pages.dev/logo.png" />
       </head>
       <body className="antialiased">
+        {initialConsent === 'accepted' && (
+          <noscript>
+            <iframe
+              src={`https://www.googletagmanager.com/ns.html?id=${GTM_ID}`}
+              height="0"
+              width="0"
+              style={{ display: 'none', visibility: 'hidden' }}
+            />
+          </noscript>
+        )}
         <nav className="bg-secondary text-white shadow-lg">
           <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
             <Link href="/" className="text-2xl font-bold hover:text-blue-100">
@@ -95,6 +111,7 @@ export default function RootLayout({
           </div>
         </nav>
         <PwaInstallPrompt />
+        <ConsentManager initialConsent={initialConsent} />
         {children}
       </body>
     </html>

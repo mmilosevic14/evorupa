@@ -1,6 +1,14 @@
 import type { NextConfig } from 'next'
 import withPWA from 'next-pwa'
 
+if (
+  process.platform === 'win32' &&
+  process.env.NODE_ENV === 'development' &&
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED === undefined
+) {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
+}
+
 const distDir = process.env.NEXT_DIST_DIR?.trim() || '.next'
 
 const config: NextConfig = {

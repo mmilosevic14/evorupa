@@ -27,7 +27,7 @@ describe('supabaseConfig', () => {
 
     const config = getSupabaseConfig()
 
-    expect(config.url).toBe('https://wqnrywhafxutgginzbvk.supabase.co')
+    expect(config.url).toBe('https://hjbvdtaeqqlyabmklrmg.supabase.co')
     expect(config.publishableKey.startsWith('sb_publishable_')).toBe(true)
   })
 })

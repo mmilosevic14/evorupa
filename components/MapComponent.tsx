@@ -21,8 +21,30 @@ const MAP_VIEW_ANIMATION = {
   easeLinearity: 0.2,
 }
 
+function isMapUsable(map: L.Map) {
+  const mapWithInternals = map as L.Map & {
+    _loaded?: boolean
+    _mapPane?: HTMLElement | null
+  }
+
+  if (!mapWithInternals._loaded || !mapWithInternals._mapPane) {
+    return false
+  }
+
+  try {
+    const container = map.getContainer()
+    return Boolean(container?.isConnected)
+  } catch {
+    return false
+  }
+}
+
 function invalidateMapSize(map: L.Map, delay = 320) {
   const syncSize = () => {
+    if (!isMapUsable(map)) {
+      return
+    }
+
     map.invalidateSize({ pan: false, debounceMoveend: true })
   }
 
@@ -35,6 +57,10 @@ function preserveMapViewport(map: L.Map, delay = 320) {
   const zoom = map.getZoom()
 
   const restoreView = () => {
+    if (!isMapUsable(map)) {
+      return
+    }
+
     invalidateMapSize(map, 0)
     map.setView(center, zoom, MAP_VIEW_ANIMATION)
   }
@@ -50,6 +76,10 @@ function fitActiveMarkers(map: L.Map, markersLayer: L.FeatureGroup | null, delay
   }
 
   const fitMarkers = () => {
+    if (!isMapUsable(map)) {
+      return
+    }
+
     invalidateMapSize(map, 0)
 
     const markerBounds = markersLayer.getBounds()
@@ -82,6 +112,10 @@ function ensureActiveMarkersVisible(map: L.Map, markersLayer: L.FeatureGroup | n
   }
 
   const fitMarkersIfNeeded = () => {
+    if (!isMapUsable(map)) {
+      return
+    }
+
     invalidateMapSize(map, 0)
 
     const markerBounds = markersLayer.getBounds()
@@ -108,6 +142,10 @@ function ensureActiveMarkersVisible(map: L.Map, markersLayer: L.FeatureGroup | n
 
 function ensurePopupVisible(map: L.Map, popup: L.Popup, delay = 320) {
   const panPopupIntoView = () => {
+    if (!isMapUsable(map)) {
+      return
+    }
+
     invalidateMapSize(map, 0)
     popup.update()
 
@@ -456,14 +494,14 @@ export default function MapComponent({
 
     const markerBounds = markersLayer.getBounds()
 
-    if (markerBounds.isValid() && reports.length > 1) {
+    if (isMapUsable(map) && markerBounds.isValid() && reports.length > 1) {
       map.fitBounds(markerBounds, {
         padding: [32, 32],
         ...MAP_VIEW_ANIMATION,
       })
-    } else if (reports.length === 1) {
+    } else if (isMapUsable(map) && reports.length === 1) {
       map.setView([reports[0].latitude, reports[0].longitude], 11, MAP_VIEW_ANIMATION)
-    } else if (selectedDistrictBoundary) {
+    } else if (isMapUsable(map) && selectedDistrictBoundary) {
       map.fitBounds(
         [
           [selectedDistrictBoundary.bounds.south, selectedDistrictBoundary.bounds.west],

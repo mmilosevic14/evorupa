@@ -1,15 +1,25 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { syncUserProfile } from '@/utils/supabase/profile'
 
 export default function LoginPageClient() {
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    const callbackError = searchParams.get('error')
+
+    if (callbackError) {
+      setError(callbackError)
+    }
+  }, [searchParams])
 
   const getAuthRedirectUrl = () => {
     return `${window.location.origin}/auth/callback?next=/map`

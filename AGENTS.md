@@ -76,6 +76,17 @@ set -a
 set +a
 ```
 
+## Supabase Migration Context
+
+This repository was migrated in July 2026 from the retired Supabase project `wqnrywhafxutgginzbvk` to `hjbvdtaeqqlyabmklrmg`.
+
+Keep these migration artifacts in mind during debugging:
+
+1. Auth, profile, and ownership issues can still come from partial user remap state rather than current application code.
+2. `public.users.email` can temporarily contain parked values in the form `migrating+<old-user-id>+<email>` while recreated auth accounts are being matched.
+3. If reports exist but profile/email state looks wrong, check [SUPABASE_MIGRATION_TODO.md](c:/Users/mmilosev/gderupa/SUPABASE_MIGRATION_TODO.md), [scripts/prepare-user-id-remap.sql](c:/Users/mmilosev/gderupa/scripts/prepare-user-id-remap.sql), and [scripts/finalize-user-id-remap.sql](c:/Users/mmilosev/gderupa/scripts/finalize-user-id-remap.sql) before changing app logic.
+4. Ignore stale Supabase project IDs in generated output folders such as `.next`, `.open-next`, `.pages-deploy`, and `.vercel`; only source files and current env/config files are authoritative.
+
 ## Standard Checks
 
 Run these before handing off code changes:

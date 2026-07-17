@@ -1,5 +1,7 @@
 # EvoRupa - Supabase Integration Guide
 
+> Migration note: this project now uses the Supabase project `hjbvdtaeqqlyabmklrmg`. If you see `migrating+...` emails in `public.users`, that is a migration artifact from the July 2026 user-remap flow, not the intended steady state.
+
 ## ✅ What's Been Setup
 
 Your project now has complete Supabase integration:
@@ -8,8 +10,8 @@ Your project now has complete Supabase integration:
 
 1. **`.env.local`** - Your Supabase credentials (already added)
    ```env
-   NEXT_PUBLIC_SUPABASE_URL=https://wqnrywhafxutgginzbvk.supabase.co
-   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_VND7l9H4nAxQvlubQQ_hNQ_GbwIZYdK
+  NEXT_PUBLIC_SUPABASE_URL=https://hjbvdtaeqqlyabmklrmg.supabase.co
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<current publishable key>
    ```
 
 2. **`utils/supabase/server.ts`** - Server-side Supabase client
@@ -40,8 +42,8 @@ Your project now has complete Supabase integration:
 
 ## 🔑 Your Supabase Credentials
 
-✅ **URL:** `https://wqnrywhafxutgginzbvk.supabase.co`
-✅ **Key:** `sb_publishable_VND7l9H4nAxQvlubQQ_hNQ_GbwIZYdK`
+✅ **URL:** `https://hjbvdtaeqqlyabmklrmg.supabase.co`
+✅ **Key:** check `.env.local` or [lib/supabase-public-config.json](c:/Users/mmilosev/gderupa/lib/supabase-public-config.json)
 
 These are already added to `.env.local`. Keep them safe!
 
