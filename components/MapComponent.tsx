@@ -38,6 +38,16 @@ function getCoordinateMapLink(latitude: number, longitude: number) {
   return `geo:${formattedLatitude},${formattedLongitude}?q=${formattedLatitude},${formattedLongitude}`
 }
 
+function getReportShareUrl(reportId: string) {
+  const reportPath = `/map?report=${encodeURIComponent(reportId)}`
+
+  if (typeof window === 'undefined') {
+    return reportPath
+  }
+
+  return new URL(reportPath, window.location.origin).toString()
+}
+
 function isMapUsable(map: L.Map) {
   const mapWithInternals = map as L.Map & {
     _loaded?: boolean
@@ -326,6 +336,62 @@ export default function MapComponent({
       }
     }
 
+    const handlePopupShareAction = async (event: MouseEvent) => {
+      const target = event.target
+
+      if (!(target instanceof HTMLElement)) {
+        return
+      }
+
+      const shareButton = target.closest<HTMLElement>('[data-report-share-url]')
+
+      if (!shareButton) {
+        return
+      }
+
+      event.preventDefault()
+      event.stopPropagation()
+
+      const shareUrl = shareButton.dataset.reportShareUrl
+
+      if (!shareUrl) {
+        return
+      }
+
+      const originalLabel = shareButton.textContent || 'Podeli link'
+
+      try {
+        if (navigator.share) {
+          await navigator.share({
+            title: 'EvoRupa prijava',
+            text: 'Pogledaj detalje prijave na EvoRupa mapi.',
+            url: shareUrl,
+          })
+          return
+        }
+
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(shareUrl)
+          shareButton.textContent = 'Link kopiran'
+
+          window.setTimeout(() => {
+            if (shareButton.isConnected) {
+              shareButton.textContent = originalLabel
+            }
+          }, 1800)
+          return
+        }
+
+        window.open(shareUrl, '_blank', 'noopener,noreferrer')
+      } catch (error) {
+        if ((error as Error).name === 'AbortError') {
+          return
+        }
+
+        console.error('Popup share failed:', error)
+      }
+    }
+
     const handleBeforePrint = () => {
       preserveMapViewport(map, 420)
     }
@@ -337,6 +403,7 @@ export default function MapComponent({
     document.addEventListener('fullscreenchange', syncFullscreenState)
     window.addEventListener('beforeprint', handleBeforePrint)
     window.addEventListener('afterprint', handleAfterPrint)
+    shell.addEventListener('click', handlePopupShareAction)
     map.on('popupopen', handlePopupOpen)
     map.on('popupclose', handlePopupClose)
 
@@ -344,6 +411,7 @@ export default function MapComponent({
       document.removeEventListener('fullscreenchange', syncFullscreenState)
       window.removeEventListener('beforeprint', handleBeforePrint)
       window.removeEventListener('afterprint', handleAfterPrint)
+      shell.removeEventListener('click', handlePopupShareAction)
       map.off('popupopen', handlePopupOpen)
       map.off('popupclose', handlePopupClose)
       markersLayerRef.current?.clearLayers()
@@ -403,6 +471,7 @@ export default function MapComponent({
         reports.forEach((report) => {
           const photoUrl = getReportPhotoUrl(report.photo_url)
           const coordinateLink = getCoordinateMapLink(report.latitude, report.longitude)
+          const shareUrl = getReportShareUrl(report.id)
           const marker = L.marker([report.latitude, report.longitude])
           marker.on('click', () => {
             const mapWithPopup = map as L.Map & { _popup?: L.Popup | null }
@@ -427,6 +496,19 @@ export default function MapComponent({
                   rel="noopener noreferrer"
                 >${report.latitude.toFixed(5)}, ${report.longitude.toFixed(5)}</a>
               </p>
+              <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.75rem;">
+                <a
+                  href="${shareUrl}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style="display:inline-flex;align-items:center;justify-content:center;border-radius:9999px;background:#e2e8f0;color:#0f172a;padding:0.4rem 0.75rem;font-size:12px;font-weight:600;text-decoration:none;"
+                >Otvori prijavu</a>
+                <button
+                  type="button"
+                  data-report-share-url="${shareUrl}"
+                  style="display:inline-flex;align-items:center;justify-content:center;border-radius:9999px;border:none;background:#dbeafe;color:#1d4ed8;padding:0.4rem 0.75rem;font-size:12px;font-weight:600;cursor:pointer;"
+                >Podeli link</button>
+              </div>
             </div>
           `)
           marker.on('popupopen', () => {
@@ -494,6 +576,7 @@ export default function MapComponent({
                 ${group.reports
                   .map((report) => {
                     const photoUrl = getReportPhotoUrl(report.photo_url)
+                    const shareUrl = getReportShareUrl(report.id)
 
                     return `
                       <div style="border-top:1px solid #e5e7eb;padding-top:0.75rem;">
@@ -505,6 +588,19 @@ export default function MapComponent({
                         <h4 style="font-weight:700;margin-bottom:0.25rem;">${report.title}</h4>
                         <p style="font-size:12px;color:#4b5563;margin-bottom:0.5rem;">${report.description.substring(0, 120)}...</p>
                         <p style="font-size:12px;"><strong>Status:</strong> ${statusLabels?.[report.status] ?? report.status}</p>
+                        <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.75rem;">
+                          <a
+                            href="${shareUrl}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style="display:inline-flex;align-items:center;justify-content:center;border-radius:9999px;background:#e2e8f0;color:#0f172a;padding:0.4rem 0.75rem;font-size:12px;font-weight:600;text-decoration:none;"
+                          >Otvori prijavu</a>
+                          <button
+                            type="button"
+                            data-report-share-url="${shareUrl}"
+                            style="display:inline-flex;align-items:center;justify-content:center;border-radius:9999px;border:none;background:#dbeafe;color:#1d4ed8;padding:0.4rem 0.75rem;font-size:12px;font-weight:600;cursor:pointer;"
+                          >Podeli link</button>
+                        </div>
                       </div>
                     `
                   })

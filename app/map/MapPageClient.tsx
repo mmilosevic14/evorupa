@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import ReportViewsTracker from '@/components/ReportViewsTracker'
+import ShareButton from '@/components/ShareButton'
 import { incrementReportViews, toggleReportUpvote } from '@/lib/reportEngagement'
 import { buildCategoryLabelMap, buildStatusLabelMap, derivePriorityFromUpvotes, sortCategories, sortStatuses } from '@/lib/reportMetadata'
 import { buildVisibleAuthorMap, getVisibleAuthorName } from '@/lib/reportAuthors'
@@ -54,6 +55,10 @@ function getPriorityLabel(upvotes: number | null | undefined) {
   }
 
   return 'Nizak'
+}
+
+function getReportShareHref(reportId: string) {
+  return `/map?report=${encodeURIComponent(reportId)}`
 }
 
 function MetadataIcon({ type }: { type: 'category' | 'status' | 'location' }) {
@@ -924,6 +929,7 @@ export default function MapPageClient() {
                   {pagedOpenReports.map((report) => {
                     const location = parseReportLocation(report.tags)
                     const isActiveReport = activePopupReportId === report.id
+                    const reportShareHref = getReportShareHref(report.id)
                     const showPlaceLine = !selectedPlace
                     const showMunicipalityLine =
                       !!location.municipality &&
@@ -975,6 +981,16 @@ export default function MapPageClient() {
                             {getVisibleAuthorName(report, authorNames) && <p className="whitespace-nowrap"><strong>Autor:</strong> {getVisibleAuthorName(report, authorNames)}</p>}
                             <p className="inline-flex items-center gap-1.5 whitespace-nowrap"><MetadataIcon type="location" /><span className="whitespace-nowrap"><strong>Koordinate:</strong> {report.latitude.toFixed(4)}, {report.longitude.toFixed(4)}</span></p>
                           </div>
+                        </div>
+                        <div className="mt-4 flex flex-wrap items-center gap-3 no-print">
+                          <ShareButton
+                            href={reportShareHref}
+                            title={report.title}
+                            text="Pogledaj detalje prijave na EvoRupa mapi."
+                            stopPropagation
+                            className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-200"
+                          />
+                          <span className="text-xs text-gray-500">Link vodi direktno na ovu prijavu na mapi.</span>
                         </div>
                       </div>
                     )
@@ -1076,6 +1092,7 @@ export default function MapPageClient() {
                   {pagedSelectedReports.map((report) => {
                     const location = parseReportLocation(report.tags)
                     const isActiveReport = activePopupReportId === report.id
+                    const reportShareHref = getReportShareHref(report.id)
                     const showPlaceLine = !selectedPlace
                     const showMunicipalityLine =
                       !!location.municipality &&
@@ -1123,6 +1140,18 @@ export default function MapPageClient() {
                         {showPlaceLine && <p className="whitespace-nowrap"><strong>Mesto:</strong> {getReportPlaceLabel(report)}</p>}
                         {showMunicipalityLine && <p className="whitespace-nowrap"><strong>Opština:</strong> {location.municipality}</p>}
                         {getVisibleAuthorName(report, authorNames) && <p className="whitespace-nowrap"><strong>Autor:</strong> {getVisibleAuthorName(report, authorNames)}</p>}
+                      </div>
+                      <div className="mt-4 flex flex-wrap items-center gap-2">
+                        <ShareButton
+                          href={reportShareHref}
+                          title={report.title}
+                          text="Pogledaj detalje prijave na EvoRupa mapi."
+                          stopPropagation
+                          className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-200"
+                        />
+                        <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 whitespace-nowrap">
+                          Direktan link do prijave
+                        </span>
                       </div>
                       {engagementEnabled && (
                         <div className="mt-4 flex flex-wrap items-center gap-2">
