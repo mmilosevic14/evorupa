@@ -1,90 +1,68 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-
-type BeforeInstallPromptEvent = Event & {
-  prompt: () => Promise<void>
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>
-}
+import { usePwaInstall } from '@/lib/usePwaInstall'
 
 const DISMISS_KEY = 'evorupa:pwa-install-dismissed'
+const DISMISS_TTL_MS = 1000 * 60 * 60 * 24 * 7
 
-function isIosDevice() {
-  if (typeof navigator === 'undefined') {
-    return false
-  }
-
-  return /iphone|ipad|ipod/i.test(navigator.userAgent)
-}
-
-function isStandaloneDisplayMode() {
+function isDismissed() {
   if (typeof window === 'undefined') {
     return false
   }
 
-  const iosNavigator = window.navigator as Navigator & { standalone?: boolean }
+  const dismissedAt = Number(window.localStorage.getItem(DISMISS_KEY))
 
-  return window.matchMedia('(display-mode: standalone)').matches || iosNavigator.standalone === true
+  if (!Number.isFinite(dismissedAt) || dismissedAt <= 0) {
+    window.localStorage.removeItem(DISMISS_KEY)
+    return false
+  }
+
+  if (Date.now() - dismissedAt > DISMISS_TTL_MS) {
+    window.localStorage.removeItem(DISMISS_KEY)
+    return false
+  }
+
+  return true
 }
 
 export default function PwaInstallPrompt() {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+  const { deferredPrompt, installed, showIosHint, promptToInstall } = usePwaInstall()
   const [dismissed, setDismissed] = useState(false)
-  const [installed, setInstalled] = useState(false)
-  const [showIosHint, setShowIosHint] = useState(false)
 
   useEffect(() => {
     if (typeof window === 'undefined') {
       return
     }
 
-    setDismissed(window.localStorage.getItem(DISMISS_KEY) === 'true')
-    setInstalled(isStandaloneDisplayMode())
-    setShowIosHint(isIosDevice() && !isStandaloneDisplayMode())
-
-    const handleBeforeInstallPrompt = (event: Event) => {
-      event.preventDefault()
-      setDeferredPrompt(event as BeforeInstallPromptEvent)
-      setShowIosHint(false)
-    }
-
-    const handleAppInstalled = () => {
-      setInstalled(true)
-      setDeferredPrompt(null)
-      setShowIosHint(false)
-      window.localStorage.removeItem(DISMISS_KEY)
-    }
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
-    window.addEventListener('appinstalled', handleAppInstalled)
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
-      window.removeEventListener('appinstalled', handleAppInstalled)
-    }
+    setDismissed(isDismissed())
   }, [])
+
+  useEffect(() => {
+    if (!installed || typeof window === 'undefined') {
+      return
+    }
+
+    window.localStorage.removeItem(DISMISS_KEY)
+  }, [installed])
 
   const handleDismiss = () => {
     setDismissed(true)
     if (typeof window !== 'undefined') {
-      window.localStorage.setItem(DISMISS_KEY, 'true')
+      window.localStorage.setItem(DISMISS_KEY, String(Date.now()))
     }
   }
 
   const handleInstall = async () => {
-    if (!deferredPrompt) {
+    const result = await promptToInstall()
+
+    if (!result) {
       return
     }
 
-    await deferredPrompt.prompt()
-    const result = await deferredPrompt.userChoice
-
     if (result.outcome === 'accepted') {
-      setInstalled(true)
       setDismissed(false)
     }
-
-    setDeferredPrompt(null)
   }
 
   if (installed || dismissed) {
@@ -96,7 +74,7 @@ export default function PwaInstallPrompt() {
   }
 
   return (
-    <div className="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-md rounded-2xl bg-slate-900 p-4 text-white shadow-2xl ring-1 ring-white/10">
+    <div className="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-md rounded-2xl bg-slate-900/95 p-4 text-white shadow-2xl ring-1 ring-white/10 backdrop-blur">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-semibold">Instaliraj EvoRupa</p>
@@ -115,7 +93,7 @@ export default function PwaInstallPrompt() {
           ×
         </button>
       </div>
-      <div className="mt-4 flex gap-3">
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row">
         {deferredPrompt && (
           <button
             type="button"

@@ -5,7 +5,11 @@ import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { useRouter } from 'next/navigation'
 
+import ShareButton from '@/components/ShareButton'
+import { usePwaInstall } from '@/lib/usePwaInstall'
 import { createClient } from '@/utils/supabase/client'
+
+const APP_URL = 'https://evorupa.pages.dev/'
 
 type AdminState = {
   isAdmin: boolean
@@ -15,7 +19,9 @@ type AdminState = {
 export default function AppNavLinks() {
   const router = useRouter()
   const pathname = usePathname()
+  const { deferredPrompt, installed, showIosHint, promptToInstall } = usePwaInstall()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [showInstallHelp, setShowInstallHelp] = useState(false)
   const [adminState, setAdminState] = useState<AdminState>({
     isAdmin: false,
     isAuthenticated: false,
@@ -23,6 +29,7 @@ export default function AppNavLinks() {
 
   useEffect(() => {
     setMobileMenuOpen(false)
+    setShowInstallHelp(false)
   }, [pathname])
 
   useEffect(() => {
@@ -89,10 +96,24 @@ export default function AppNavLinks() {
     router.refresh()
   }
 
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      await promptToInstall()
+      setMobileMenuOpen(false)
+      return
+    }
+
+    if (showIosHint) {
+      setShowInstallHelp((prev) => !prev)
+    }
+  }
+
   const navLinks = [
     { href: '/map', label: 'Mapa' },
     { href: '/report', label: 'Prijavi problem' },
   ]
+
+  const showInstallAction = !installed && (Boolean(deferredPrompt) || showIosHint)
 
   return (
     <div className="relative">
@@ -168,6 +189,29 @@ export default function AppNavLinks() {
                 <Link href="/admin" className="px-4 py-3 text-sm font-medium transition hover:bg-gray-50">
                   Admin
                 </Link>
+              )}
+              <div className="my-1 border-t border-gray-100" />
+              <ShareButton
+                href={APP_URL}
+                title="EvoRupa"
+                text="Prijavi rupe i infrastrukturne probleme preko EvoRupa aplikacije."
+                label="Podeli aplikaciju"
+                className="px-4 py-3 text-left text-sm font-medium transition hover:bg-gray-50"
+                onSuccess={() => setMobileMenuOpen(false)}
+              />
+              {showInstallAction && (
+                <button
+                  type="button"
+                  onClick={handleInstallClick}
+                  className="px-4 py-3 text-left text-sm font-medium transition hover:bg-gray-50"
+                >
+                  {deferredPrompt ? 'Instaliraj aplikaciju' : 'Kako da instaliram aplikaciju'}
+                </button>
+              )}
+              {showInstallHelp && showIosHint && (
+                <div className="px-4 pb-3 text-xs leading-5 text-gray-600">
+                  U Safari-ju otvori Share meni i izaberi Add to Home Screen.
+                </div>
               )}
               {adminState.isAuthenticated ? (
                 <button

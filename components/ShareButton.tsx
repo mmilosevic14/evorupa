@@ -11,6 +11,7 @@ type ShareButtonProps = {
   copiedLabel?: string
   className?: string
   stopPropagation?: boolean
+  onSuccess?: () => void
 }
 
 function toAbsoluteUrl(href: string) {
@@ -33,6 +34,7 @@ export default function ShareButton({
   copiedLabel = 'Link kopiran',
   className = '',
   stopPropagation = false,
+  onSuccess,
 }: ShareButtonProps) {
   const [isCopied, setIsCopied] = useState(false)
 
@@ -64,16 +66,19 @@ export default function ShareButton({
           text,
           url: shareUrl,
         })
+        onSuccess?.()
         return
       }
 
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(shareUrl)
         setIsCopied(true)
+        onSuccess?.()
         return
       }
 
       window.open(shareUrl, '_blank', 'noopener,noreferrer')
+      onSuccess?.()
     } catch (error) {
       if ((error as Error).name === 'AbortError') {
         return

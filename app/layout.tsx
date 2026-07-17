@@ -17,6 +17,7 @@ export const metadata: Metadata = {
   },
   description: 'EvoRupa je građanska platforma za prijavu rupa, oštećenja puta i drugih infrastrukturnih problema u Srbiji.',
   applicationName: 'EvoRupa',
+  manifest: '/manifest.json',
   generator: 'Next.js',
   referrer: 'origin-when-cross-origin',
   keywords: [
