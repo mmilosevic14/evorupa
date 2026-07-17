@@ -171,7 +171,11 @@ export default async function Home() {
               ) : (
                 <div className="mt-4 space-y-3">
                   {featuredPlaces.map((group) => (
-                    <div key={group.key} className="flex items-start justify-between gap-4 rounded-xl border border-gray-200 p-4">
+                    <Link
+                      key={group.key}
+                      href={{ pathname: '/map', query: { place: group.key } }}
+                      className="flex items-start justify-between gap-4 rounded-xl border border-gray-200 p-4 transition hover:border-secondary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/40"
+                    >
                       <div>
                         <p className="font-semibold">{group.label}</p>
                         {group.municipality && (
@@ -186,7 +190,7 @@ export default async function Home() {
                         <p className="text-2xl font-bold">{group.reportCount}</p>
                         <p className="text-sm text-red-700">Otvoreno: {group.openCount}</p>
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               )}
@@ -214,7 +218,7 @@ export default async function Home() {
                               fill
                               unoptimized
                               sizes="(max-width: 640px) 100vw, 144px"
-                              className="object-cover"
+                              className="object-contain"
                             />
                           </div>
                           <div>

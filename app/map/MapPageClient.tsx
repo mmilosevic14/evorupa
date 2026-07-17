@@ -108,6 +108,7 @@ export default function MapPageClient() {
   const [selectedDistrictKey, setSelectedDistrictKey] = useState('all')
   const [selectedPlaceKey, setSelectedPlaceKey] = useState('all')
   const [focusedReportRequest, setFocusedReportRequest] = useState<{ id: string; nonce: number } | null>(null)
+  const [activePopupReportId, setActivePopupReportId] = useState<string | null>(null)
   const [pendingFocusRequest, setPendingFocusRequest] = useState<{
     reportId: string
     districtKey: string
@@ -123,7 +124,7 @@ export default function MapPageClient() {
   const mapSectionRef = useRef<HTMLDivElement | null>(null)
   const skipPlaceResetRef = useRef(false)
   const pendingFocusRequestRef = useRef(pendingFocusRequest)
-  const handledQueryReportIdRef = useRef<string | null>(null)
+  const handledQuerySelectionRef = useRef<string | null>(null)
   const handleReportFocusRef = useRef<(report: Report) => void>(() => {})
 
   useEffect(() => {
@@ -293,6 +294,10 @@ export default function MapPageClient() {
     () => groupReportsByPlace(districtFilteredReports, 'name-asc'),
     [districtFilteredReports],
   )
+  const allPlaceGroups = useMemo(
+    () => groupReportsByPlace(reports, 'name-asc'),
+    [reports],
+  )
   const selectedReports = useMemo(() => {
     if (selectedPlaceKey === 'all') {
       return districtFilteredReports
@@ -447,6 +452,7 @@ export default function MapPageClient() {
       id: pendingFocusRequest.reportId,
       nonce: pendingFocusRequest.nonce,
     })
+    setActivePopupReportId(null)
     setPendingFocusRequest(null)
   }, [pendingFocusRequest, selectedDistrictKey, selectedPlaceKey])
 
@@ -525,25 +531,66 @@ export default function MapPageClient() {
 
   useEffect(() => {
     const queryReportId = searchParams.get('report')
+    const queryPlaceKey = searchParams.get('place')
 
-    if (!queryReportId) {
-      handledQueryReportIdRef.current = null
+    if (queryReportId) {
+      const selectionKey = `report:${queryReportId}`
+
+      if (handledQuerySelectionRef.current === selectionKey) {
+        return
+      }
+
+      const report = reports.find((currentReport) => currentReport.id === queryReportId)
+
+      if (!report) {
+        return
+      }
+
+      handledQuerySelectionRef.current = selectionKey
+      handleReportFocusRef.current(report)
       return
     }
 
-    if (handledQueryReportIdRef.current === queryReportId) {
+    if (queryPlaceKey) {
+      const selectionKey = `place:${queryPlaceKey}`
+
+      if (handledQuerySelectionRef.current === selectionKey) {
+        return
+      }
+
+      const matchingPlace = allPlaceGroups.find((group) => group.key === queryPlaceKey)
+
+      if (!matchingPlace) {
+        return
+      }
+
+      const matchingDistrict = districtGroups.find((group) => group.district === matchingPlace.district)
+
+      handledQuerySelectionRef.current = selectionKey
+      skipPlaceResetRef.current = true
+      setPendingFocusRequest(null)
+      setFocusedReportRequest(null)
+      setActivePopupReportId(null)
+      setSelectedDistrictKey(matchingDistrict?.key ?? 'all')
+      setSelectedPlaceKey(matchingPlace.key)
+      mapSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
       return
     }
 
-    const report = reports.find((currentReport) => currentReport.id === queryReportId)
+    handledQuerySelectionRef.current = null
+  }, [allPlaceGroups, districtGroups, reports, searchParams])
 
-    if (!report) {
+  useEffect(() => {
+    if (!activePopupReportId) {
       return
     }
 
-    handledQueryReportIdRef.current = queryReportId
-    handleReportFocusRef.current(report)
-  }, [reports, searchParams])
+    const reportStillVisible = selectedReports.some((report) => report.id === activePopupReportId)
+
+    if (!reportStillVisible) {
+      setActivePopupReportId(null)
+    }
+  }, [activePopupReportId, selectedReports])
 
   const handleReportsViewed = (reportIds: string[]) => {
     if (!engagementEnabled) {
@@ -680,6 +727,7 @@ export default function MapPageClient() {
                 focusedReportId={focusedReportRequest?.id ?? null}
                 focusedReportNonce={focusedReportRequest?.nonce ?? 0}
                 onPlaceGroupSelect={handlePlaceGroupSelect}
+                onActiveReportChange={setActivePopupReportId}
                 onReportsViewed={handleReportsViewed}
                 statusLabels={statusLabels}
               />
@@ -875,6 +923,7 @@ export default function MapPageClient() {
                 <div className="mt-4 space-y-4">
                   {pagedOpenReports.map((report) => {
                     const location = parseReportLocation(report.tags)
+                    const isActiveReport = activePopupReportId === report.id
                     const showPlaceLine = !selectedPlace
                     const showMunicipalityLine =
                       !!location.municipality &&
@@ -892,7 +941,11 @@ export default function MapPageClient() {
                         tabIndex={0}
                         onClick={() => handleReportFocus(report)}
                         onKeyDown={(event) => handleReportCardKeyDown(event, report)}
-                        className="border border-gray-200 rounded-lg p-4 print-card print-item cursor-pointer transition hover:border-secondary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/40"
+                        className={`border rounded-lg p-4 print-card print-item cursor-pointer transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/40 ${
+                          isActiveReport
+                            ? 'border-secondary bg-secondary/5 shadow-md ring-2 ring-secondary/20'
+                            : 'border-gray-200 hover:border-secondary/40 hover:shadow-md'
+                        }`}
                       >
                         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between print-item-layout">
                           <div className="flex flex-1 flex-col gap-4 sm:flex-row sm:items-start">
@@ -903,7 +956,7 @@ export default function MapPageClient() {
                                 fill
                                 unoptimized
                                 sizes="(max-width: 640px) 100vw, 160px"
-                                className="object-cover"
+                                className="object-contain"
                               />
                             </div>
                             <div>
@@ -1022,6 +1075,7 @@ export default function MapPageClient() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {pagedSelectedReports.map((report) => {
                     const location = parseReportLocation(report.tags)
+                    const isActiveReport = activePopupReportId === report.id
                     const showPlaceLine = !selectedPlace
                     const showMunicipalityLine =
                       !!location.municipality &&
@@ -1041,7 +1095,11 @@ export default function MapPageClient() {
                         handleReportFocus(report)
                       }}
                       onKeyDown={(event) => handleReportCardKeyDown(event, report)}
-                      className="border border-gray-200 rounded-lg p-4 hover:shadow-lg transition cursor-pointer hover:border-secondary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/40"
+                      className={`border rounded-lg p-4 transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/40 ${
+                        isActiveReport
+                          ? 'border-secondary bg-secondary/5 shadow-lg ring-2 ring-secondary/20'
+                          : 'border-gray-200 hover:shadow-lg hover:border-secondary/40'
+                      }`}
                     >
                       <div className="relative w-full h-48 mb-3 overflow-hidden rounded-lg bg-gray-100">
                         <Image
@@ -1050,7 +1108,7 @@ export default function MapPageClient() {
                           fill
                           unoptimized
                           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                          className="object-cover"
+                          className="object-contain"
                         />
                       </div>
                       <h3 className="font-bold text-lg mb-2">{report.title}</h3>

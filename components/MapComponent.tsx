@@ -21,6 +21,23 @@ const MAP_VIEW_ANIMATION = {
   easeLinearity: 0.2,
 }
 
+function getCoordinateMapLink(latitude: number, longitude: number) {
+  const formattedLatitude = latitude.toFixed(5)
+  const formattedLongitude = longitude.toFixed(5)
+  const coordinateLabel = encodeURIComponent(`${formattedLatitude},${formattedLongitude}`)
+
+  if (typeof navigator !== 'undefined') {
+    const userAgent = navigator.userAgent || ''
+    const isAppleDevice = /iPad|iPhone|iPod|Macintosh/i.test(userAgent)
+
+    if (isAppleDevice) {
+      return `maps://?ll=${formattedLatitude},${formattedLongitude}&q=${coordinateLabel}`
+    }
+  }
+
+  return `geo:${formattedLatitude},${formattedLongitude}?q=${formattedLatitude},${formattedLongitude}`
+}
+
 function isMapUsable(map: L.Map) {
   const mapWithInternals = map as L.Map & {
     _loaded?: boolean
@@ -179,6 +196,7 @@ export default function MapComponent({
   focusedReportId = null,
   focusedReportNonce = 0,
   onPlaceGroupSelect,
+  onActiveReportChange,
   onReportsViewed,
   statusLabels,
 }: {
@@ -187,6 +205,7 @@ export default function MapComponent({
   focusedReportId?: string | null
   focusedReportNonce?: number
   onPlaceGroupSelect?: (group: PlaceGroup) => void
+  onActiveReportChange?: (reportId: string | null) => void
   onReportsViewed?: (reportIds: string[]) => void
   statusLabels?: Record<string, string>
 }) {
@@ -383,26 +402,39 @@ export default function MapComponent({
       if (shouldShowIndividualReports) {
         reports.forEach((report) => {
           const photoUrl = getReportPhotoUrl(report.photo_url)
+          const coordinateLink = getCoordinateMapLink(report.latitude, report.longitude)
           const marker = L.marker([report.latitude, report.longitude])
           marker.on('click', () => {
             const mapWithPopup = map as L.Map & { _popup?: L.Popup | null }
             isSwitchingPopupRef.current = Boolean(mapWithPopup._popup?.isOpen())
           })
           marker.bindPopup(`
-            <div class="text-sm" style="min-width:260px;max-width:320px;">
+            <div class="text-sm" style="min-width:260px;max-width:320px;padding-right:1.5rem;">
               <img
                 src="${photoUrl}"
                 alt="${report.title}"
-                style="width:100%;height:128px;object-fit:cover;border-radius:0.5rem;margin-bottom:0.75rem;background:#f3f4f6;"
+                style="width:100%;height:128px;object-fit:contain;border-radius:0.5rem;margin-bottom:0.75rem;background:#f3f4f6;"
               />
               <h3 style="font-weight:700;margin-bottom:0.25rem;">${report.title}</h3>
               <p style="font-size:12px;color:#4b5563;margin-bottom:0.5rem;">${report.description.substring(0, 160)}...</p>
               <p style="font-size:12px;margin-bottom:0.25rem;"><strong>Status:</strong> ${statusLabels?.[report.status] ?? report.status}</p>
-              <p style="font-size:12px;"><strong>Koordinate:</strong> ${report.latitude.toFixed(5)}, ${report.longitude.toFixed(5)}</p>
+              <p style="font-size:12px;">
+                <strong>Koordinate:</strong>
+                <a
+                  href="${coordinateLink}"
+                  class="leaflet-popup-coordinate-link"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >${report.latitude.toFixed(5)}, ${report.longitude.toFixed(5)}</a>
+              </p>
             </div>
           `)
           marker.on('popupopen', () => {
+            onActiveReportChange?.(report.id)
             onReportsViewed?.([report.id])
+          })
+          marker.on('popupclose', () => {
+            onActiveReportChange?.(null)
           })
           reportMarkersRef.current.set(report.id, marker)
           marker.addTo(markersLayer)
@@ -441,6 +473,7 @@ export default function MapComponent({
           marker.on('click', () => {
             const mapWithPopup = map as L.Map & { _popup?: L.Popup | null }
             isSwitchingPopupRef.current = Boolean(mapWithPopup._popup?.isOpen())
+            onActiveReportChange?.(null)
             onPlaceGroupSelect(group)
           })
           marker.bindTooltip(
@@ -467,7 +500,7 @@ export default function MapComponent({
                         <img
                           src="${photoUrl}"
                           alt="${report.title}"
-                          style="width:100%;height:128px;object-fit:cover;border-radius:0.5rem;margin-bottom:0.5rem;background:#f3f4f6;"
+                          style="width:100%;height:128px;object-fit:contain;border-radius:0.5rem;margin-bottom:0.5rem;background:#f3f4f6;"
                         />
                         <h4 style="font-weight:700;margin-bottom:0.25rem;">${report.title}</h4>
                         <p style="font-size:12px;color:#4b5563;margin-bottom:0.5rem;">${report.description.substring(0, 120)}...</p>
@@ -483,7 +516,11 @@ export default function MapComponent({
 
           marker.bindPopup(popupHtml)
           marker.on('popupopen', () => {
+            onActiveReportChange?.(null)
             onReportsViewed?.(group.reports.map((report) => report.id))
+          })
+          marker.on('popupclose', () => {
+            onActiveReportChange?.(null)
           })
         }
         marker.addTo(markersLayer)
@@ -523,7 +560,7 @@ export default function MapComponent({
     return () => {
       map.off('zoomend', handleZoomChange)
     }
-  }, [onPlaceGroupSelect, onReportsViewed, reports, selectedDistrict, statusLabels])
+  }, [onActiveReportChange, onPlaceGroupSelect, onReportsViewed, reports, selectedDistrict, statusLabels])
 
   useEffect(() => {
     const map = mapRef.current
