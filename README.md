@@ -3,7 +3,7 @@
 Aplikacija za prijavu problema na putevima i infrastrukturi u Srbiji. Građani mogu fotografisati i mapirati probleme, a lokalne vlasti i zastupnici mogu da ih obrađuju.
 
 ## 🚀 Verzija
-v0.1.0 - Alpha
+v0.4.0 - Beta
 
 ## 📋 Karakteristike
 
