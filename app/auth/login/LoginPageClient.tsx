@@ -168,12 +168,14 @@ export default function LoginPageClient() {
           </>
         )}
 
-        <div className="mt-4 text-center text-gray-600">
-          Nemaš nalog?{' '}
-          <Link href="/auth/signup" className="text-primary hover:underline">
-            Registruj se
-          </Link>
-        </div>
+        {showEmailLogin && (
+          <div className="mt-4 text-center text-gray-600">
+            Nemaš nalog?{' '}
+            <Link href="/auth/signup" className="text-primary hover:underline">
+              Registruj se
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   )

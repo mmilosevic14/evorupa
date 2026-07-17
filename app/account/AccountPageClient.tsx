@@ -55,6 +55,7 @@ export default function AccountPageClient() {
   const [loading, setLoading] = useState(true)
   const [savingProfile, setSavingProfile] = useState(false)
   const [savingPassword, setSavingPassword] = useState(false)
+  const [showPasswordForm, setShowPasswordForm] = useState(false)
   const [user, setUser] = useState<{ id: string } | null>(null)
   const [profile, setProfile] = useState<ProfileState>({ fullName: '', email: '', showAuthorName: false })
   const [passwordState, setPasswordState] = useState<PasswordState>({ password: '', confirmPassword: '' })
@@ -245,6 +246,7 @@ export default function AccountPageClient() {
 
       setPasswordState({ password: '', confirmPassword: '' })
       setPasswordSuccess('Lozinka je uspešno ažurirana.')
+      setShowPasswordForm(false)
     } catch (updatePasswordError) {
       console.error(updatePasswordError)
       setPasswordError('Neuspešno ažuriranje lozinke.')
@@ -380,58 +382,75 @@ export default function AccountPageClient() {
           </button>
 
           <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-6">
-            <div className="flex flex-col gap-2">
-              <h2 className="text-xl font-bold text-gray-900">Promena lozinke</h2>
-              <p className="text-sm text-gray-600">Možete postaviti ili promeniti lozinku i ako se prijavljujete preko Google-a. Tako ćete po potrebi imati i email prijavu na istom nalogu.</p>
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div className="flex flex-col gap-2">
+                <h2 className="text-xl font-bold text-gray-900">Promena lozinke</h2>
+                <p className="text-sm text-gray-600">Možete postaviti ili promeniti lozinku i ako se prijavljujete preko Google-a. Tako ćete po potrebi imati i email prijavu na istom nalogu.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setPasswordError('')
+                  setPasswordSuccess('')
+                  setShowPasswordForm((current) => !current)
+                }}
+                className="rounded-lg border border-slate-300 bg-white px-4 py-2 font-medium text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+              >
+                {showPasswordForm ? 'Otkaži promenu lozinke' : 'Promeni lozinku'}
+              </button>
             </div>
 
             {passwordError && <div className="mt-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-red-700">{passwordError}</div>}
             {passwordSuccess && <div className="mt-4 rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-green-700">{passwordSuccess}</div>}
 
-            <div className="mt-6 grid gap-6 md:grid-cols-2">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Nova lozinka</label>
-                <input
-                  type="password"
-                  value={passwordState.password}
-                  onChange={(event) => setPasswordState((current) => ({ ...current, password: event.target.value }))}
-                  className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2"
-                  placeholder="Unesite novu lozinku"
-                  autoComplete="new-password"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Potvrdite novu lozinku</label>
-                <input
-                  type="password"
-                  value={passwordState.confirmPassword}
-                  onChange={(event) => setPasswordState((current) => ({ ...current, confirmPassword: event.target.value }))}
-                  className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2"
-                  placeholder="Ponovite novu lozinku"
-                  autoComplete="new-password"
-                />
-              </div>
-            </div>
+            {showPasswordForm && (
+              <>
+                <div className="mt-6 grid gap-6 md:grid-cols-2">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Nova lozinka</label>
+                    <input
+                      type="password"
+                      value={passwordState.password}
+                      onChange={(event) => setPasswordState((current) => ({ ...current, password: event.target.value }))}
+                      className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2"
+                      placeholder="Unesite novu lozinku"
+                      autoComplete="new-password"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Potvrdite novu lozinku</label>
+                    <input
+                      type="password"
+                      value={passwordState.confirmPassword}
+                      onChange={(event) => setPasswordState((current) => ({ ...current, confirmPassword: event.target.value }))}
+                      className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2"
+                      placeholder="Ponovite novu lozinku"
+                      autoComplete="new-password"
+                    />
+                  </div>
+                </div>
 
-            <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
-              <p className="text-sm font-medium text-gray-900">Bezbednosni uslovi</p>
-              <ul className="mt-3 space-y-2 text-sm text-gray-600">
-                {passwordChecks.map((requirement) => (
-                  <li key={requirement.id} className={requirement.met ? 'text-green-700' : 'text-gray-600'}>
-                    {requirement.met ? 'Ispunjeno:' : 'Potrebno:'} {requirement.label}
-                  </li>
-                ))}
-              </ul>
-            </div>
+                <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+                  <p className="text-sm font-medium text-gray-900">Bezbednosni uslovi</p>
+                  <ul className="mt-3 space-y-2 text-sm text-gray-600">
+                    {passwordChecks.map((requirement) => (
+                      <li key={requirement.id} className={requirement.met ? 'text-green-700' : 'text-gray-600'}>
+                        {requirement.met ? 'Ispunjeno:' : 'Potrebno:'} {requirement.label}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
 
-            <button
-              type="button"
-              onClick={savePassword}
-              disabled={savingPassword}
-              className="mt-6 rounded-lg bg-secondary px-5 py-2.5 font-medium text-white transition hover:bg-secondary/90 disabled:opacity-50"
-            >
-              {savingPassword ? 'Čuvanje...' : 'Sačuvaj lozinku'}
-            </button>
+                <button
+                  type="button"
+                  onClick={savePassword}
+                  disabled={savingPassword}
+                  className="mt-6 rounded-lg bg-secondary px-5 py-2.5 font-medium text-white transition hover:bg-secondary/90 disabled:opacity-50"
+                >
+                  {savingPassword ? 'Čuvanje...' : 'Sačuvaj lozinku'}
+                </button>
+              </>
+            )}
           </div>
         </section>
 
