@@ -31,9 +31,19 @@ jobs:
 
       - name: Install dependencies
         run: |
+          log_dir="$(npm config get cache)/_logs"
+          mkdir -p tmp/npm-logs
+
           for attempt in 1 2 3; do
-            if npm ci; then
+            if npm ci --no-audit; then
               exit 0
+            fi
+
+            latest_log="$(find "$log_dir" -maxdepth 1 -type f -name '*.log' -printf '%T@ %p\n' 2>/dev/null | sort -nr | head -n 1 | cut -d' ' -f2-)"
+            if [ -n "$latest_log" ] && [ -f "$latest_log" ]; then
+              cp "$latest_log" "tmp/npm-logs/npm-ci-attempt-${attempt}.log"
+              echo "Latest npm debug log for attempt $attempt: $latest_log"
+              tail -n 200 "$latest_log"
             fi
 
             if [ "$attempt" -eq 3 ]; then
@@ -41,9 +51,19 @@ jobs:
               exit 1
             fi
 
+            echo "Cleaning npm cache before retry"
+            npm cache clean --force || true
             echo "npm ci failed on attempt $attempt; retrying in 15 seconds"
             sleep 15
           done
+
+      - name: Upload npm debug logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-debug-logs-run-${{ github.run_id }}
+          path: tmp/npm-logs
+          if-no-files-found: ignore
 
       - name: Load bundled public Supabase config
         run: |
