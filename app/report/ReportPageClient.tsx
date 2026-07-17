@@ -1,7 +1,8 @@
 'use client'
 
 import Image from 'next/image'
-import { useEffect, useState } from 'react'
+import dynamic from 'next/dynamic'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { DEFAULT_REPORT_CATEGORIES, sortCategories } from '@/lib/reportMetadata'
 import { createClient } from '@/utils/supabase/client'
@@ -9,19 +10,29 @@ import { syncUserProfile } from '@/utils/supabase/profile'
 import type { Database } from '@/lib/supabase'
 import { buildLocationTags, type ReportLocationDetails } from '@/lib/reportLocation'
 import {
-  getCenteredSquareCrop,
   getScaledImageDimensions,
   MAX_IMAGE_BYTES,
   WEBP_QUALITY,
 } from '@/lib/reportImageProcessing'
 import { SERBIA_DISTRICT_BOUNDARIES } from '@/lib/serbiaDistricts'
 
+const ReportLocationPickerMap = dynamic(() => import('@/components/ReportLocationPickerMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-72 w-full items-center justify-center rounded-xl border border-blue-200 bg-white text-sm text-gray-500">
+      Mapa se učitava...
+    </div>
+  ),
+})
+
 const DEFAULT_REPORT_LOCATION = {
   latitude: 44.0165,
   longitude: 21.0059,
 }
 
-type LocationSource = 'default' | 'browser' | 'photo'
+const REPORT_DRAFT_STORAGE_KEY = 'evorupa:report-draft'
+
+type LocationSource = 'default' | 'browser' | 'photo' | 'map'
 
 const DISTRICT_OPTIONS = Array.from(
   new Set(SERBIA_DISTRICT_BOUNDARIES.map((feature) => feature.district)),
@@ -217,6 +228,20 @@ type CategoryOption = {
   sort_order: number
 }
 
+type PersistedReportDraft = {
+  title: string
+  description: string
+  category: string
+  latitude: number
+  longitude: number
+  sourceImageUrl: string
+  locationSource: LocationSource
+  locationMessage: string
+  locationDetails: ReportLocationDetails
+  placePickerQuery: string
+  hadLocalPhoto: boolean
+}
+
 function isValidHttpUrl(value: string) {
   try {
     const parsed = new URL(value)
@@ -224,22 +249,6 @@ function isValidHttpUrl(value: string) {
   } catch {
     return false
   }
-}
-
-async function readBlobAsDataUrl(blob: Blob) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      if (typeof reader.result === 'string') {
-        resolve(reader.result)
-        return
-      }
-
-      reject(new Error('Nije moguće prikazati obrađenu sliku.'))
-    }
-    reader.onerror = () => reject(reader.error ?? new Error('Greška pri čitanju slike.'))
-    reader.readAsDataURL(blob)
-  })
 }
 
 async function loadImageFromBlob(blob: Blob) {
@@ -314,11 +323,10 @@ async function readSourceBlob({ file, sourceUrl }: { file?: File; sourceUrl?: st
 async function processImageToWebp({ file, sourceUrl }: { file?: File; sourceUrl?: string }) {
   const sourceBlob = await readSourceBlob({ file, sourceUrl })
   const image = await loadImageFromBlob(sourceBlob)
-  const { sourceX, sourceY, sourceSize } = getCenteredSquareCrop(
+  const { width: targetWidth, height: targetHeight } = getScaledImageDimensions(
     image.naturalWidth,
     image.naturalHeight,
   )
-  const { width: targetWidth, height: targetHeight } = getScaledImageDimensions(sourceSize, sourceSize)
   const canvas = document.createElement('canvas')
 
   canvas.width = targetWidth
@@ -332,10 +340,6 @@ async function processImageToWebp({ file, sourceUrl }: { file?: File; sourceUrl?
 
   context.drawImage(
     image,
-    sourceX,
-    sourceY,
-    sourceSize,
-    sourceSize,
     0,
     0,
     targetWidth,
@@ -368,6 +372,63 @@ const EMPTY_LOCATION_DETAILS: ReportLocationDetails = {
   region: 'Srbija',
 }
 
+function isReportLocationDetails(value: unknown): value is ReportLocationDetails {
+  if (!value || typeof value !== 'object') {
+    return false
+  }
+
+  const candidate = value as Partial<ReportLocationDetails>
+  return (
+    typeof candidate.placeName === 'string' &&
+    typeof candidate.placeType === 'string' &&
+    typeof candidate.municipality === 'string' &&
+    typeof candidate.district === 'string' &&
+    typeof candidate.region === 'string'
+  )
+}
+
+function parsePersistedDraft(rawValue: string | null): PersistedReportDraft | null {
+  if (!rawValue) {
+    return null
+  }
+
+  try {
+    const parsed = JSON.parse(rawValue) as Partial<PersistedReportDraft>
+
+    if (
+      typeof parsed.title !== 'string' ||
+      typeof parsed.description !== 'string' ||
+      typeof parsed.category !== 'string' ||
+      typeof parsed.latitude !== 'number' ||
+      typeof parsed.longitude !== 'number' ||
+      typeof parsed.sourceImageUrl !== 'string' ||
+      typeof parsed.locationSource !== 'string' ||
+      typeof parsed.locationMessage !== 'string' ||
+      typeof parsed.placePickerQuery !== 'string' ||
+      typeof parsed.hadLocalPhoto !== 'boolean' ||
+      !isReportLocationDetails(parsed.locationDetails)
+    ) {
+      return null
+    }
+
+    return {
+      title: parsed.title,
+      description: parsed.description,
+      category: parsed.category,
+      latitude: parsed.latitude,
+      longitude: parsed.longitude,
+      sourceImageUrl: parsed.sourceImageUrl,
+      locationSource: parsed.locationSource,
+      locationMessage: parsed.locationMessage,
+      locationDetails: parsed.locationDetails,
+      placePickerQuery: parsed.placePickerQuery,
+      hadLocalPhoto: parsed.hadLocalPhoto,
+    }
+  } catch {
+    return null
+  }
+}
+
 export default function ReportPageClient() {
   const [formData, setFormData] = useState<FormData>({
     title: '',
@@ -392,10 +453,14 @@ export default function ReportPageClient() {
   const [placePickerQuery, setPlacePickerQuery] = useState('')
   const [placePickerLoading, setPlacePickerLoading] = useState(false)
   const [placePickerOptions, setPlacePickerOptions] = useState<SettlementOption[]>([])
+  const [draftHydrated, setDraftHydrated] = useState(false)
+  const [draftNotice, setDraftNotice] = useState('')
   const [locationMessage, setLocationMessage] = useState(
     'Pokušaćemo da preuzmemo vašu trenutnu lokaciju. Ako ne uspe, koristi se podrazumevana lokacija u Srbiji.',
   )
   const router = useRouter()
+  const previewUrlRef = useRef<string | null>(null)
+  const restoredDraftRef = useRef(false)
   const availableRegionOptions = Array.from(
     new Set([...REGION_OPTIONS, locationDetails.region].filter(Boolean)),
   )
@@ -403,7 +468,69 @@ export default function ReportPageClient() {
     new Set([...DISTRICT_OPTIONS, locationDetails.district].filter(Boolean)),
   ).sort((left, right) => left.localeCompare(right, 'sr'))
 
+  const updatePhotoPreview = (nextFile: File | null) => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current)
+      previewUrlRef.current = null
+    }
+
+    if (!nextFile) {
+      setPhotoPreview('')
+      return
+    }
+
+    const nextPreviewUrl = URL.createObjectURL(nextFile)
+    previewUrlRef.current = nextPreviewUrl
+    setPhotoPreview(nextPreviewUrl)
+  }
+
   useEffect(() => {
+    if (typeof window === 'undefined') {
+      setDraftHydrated(true)
+      return
+    }
+
+    const savedDraft = parsePersistedDraft(window.localStorage.getItem(REPORT_DRAFT_STORAGE_KEY))
+
+    if (savedDraft) {
+      restoredDraftRef.current = true
+      setFormData((prev) => ({
+        ...prev,
+        title: savedDraft.title,
+        description: savedDraft.description,
+        category: savedDraft.category,
+        latitude: savedDraft.latitude,
+        longitude: savedDraft.longitude,
+        photo: null,
+      }))
+      setSourceImageUrl(savedDraft.sourceImageUrl)
+      setLocationSource(savedDraft.locationSource)
+      setLocationMessage(savedDraft.locationMessage)
+      setLocationDetails(savedDraft.locationDetails)
+      setPlacePickerQuery(savedDraft.placePickerQuery)
+      setDraftNotice(
+        savedDraft.hadLocalPhoto
+          ? 'Vraćen je sačuvani nacrt. Ako ste ranije birali fotografiju sa telefona, izaberite je ponovo jer pregledač ne može da vrati lokalni fajl posle povratka iz kamere.'
+          : 'Vraćen je sačuvani nacrt prijave.',
+      )
+    }
+
+    setDraftHydrated(true)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!draftHydrated) {
+      return
+    }
+
     const checkAuth = async () => {
       const supabase = createClient()
       const [
@@ -439,22 +566,60 @@ export default function ReportPageClient() {
 
     checkAuth()
 
-    requestBrowserLocation(
-      (coords) => {
-        setFormData((prev) => ({
-          ...prev,
-          latitude: coords.latitude,
-          longitude: coords.longitude,
-        }))
-        setLocationSource('browser')
-        setLocationMessage('Koristi se vaša trenutna lokacija.')
-      },
-      (message) => {
-        setLocationSource('default')
-        setLocationMessage(message)
-      },
-    )
-  }, [])
+    if (!restoredDraftRef.current) {
+      requestBrowserLocation(
+        (coords) => {
+          setFormData((prev) => ({
+            ...prev,
+            latitude: coords.latitude,
+            longitude: coords.longitude,
+          }))
+          setLocationSource('browser')
+          setLocationMessage('Koristi se vaša trenutna lokacija.')
+        },
+        (message) => {
+          setLocationSource('default')
+          setLocationMessage(message)
+        },
+      )
+    }
+  }, [draftHydrated])
+
+  useEffect(() => {
+    if (!draftHydrated || typeof window === 'undefined' || success) {
+      return
+    }
+
+    const persistedDraft: PersistedReportDraft = {
+      title: formData.title,
+      description: formData.description,
+      category: formData.category,
+      latitude: formData.latitude,
+      longitude: formData.longitude,
+      sourceImageUrl,
+      locationSource,
+      locationMessage,
+      locationDetails,
+      placePickerQuery,
+      hadLocalPhoto: Boolean(formData.photo),
+    }
+
+    window.localStorage.setItem(REPORT_DRAFT_STORAGE_KEY, JSON.stringify(persistedDraft))
+  }, [
+    draftHydrated,
+    formData.category,
+    formData.description,
+    formData.latitude,
+    formData.longitude,
+    formData.photo,
+    formData.title,
+    locationDetails,
+    locationMessage,
+    locationSource,
+    placePickerQuery,
+    sourceImageUrl,
+    success,
+  ])
 
   useEffect(() => {
     if (!pickerAllowed) {
@@ -532,6 +697,17 @@ export default function ReportPageClient() {
     setLocationSource('default')
     setLocationMessage('Lokacija je postavljena preko birača mesta.')
   }
+
+  const handleMapLocationPick = (coords: { latitude: number; longitude: number }) => {
+    setFormData((prev) => ({
+      ...prev,
+      latitude: coords.latitude,
+      longitude: coords.longitude,
+    }))
+    setLocationSource('map')
+    setLocationMessage('Lokacija je postavljena preko mape.')
+  }
+
   useEffect(() => {
     let ignore = false
 
@@ -592,12 +768,11 @@ export default function ReportPageClient() {
 
       try {
         const processedFile = await processImageToWebp({ file })
-        const preview = await readBlobAsDataUrl(processedFile)
         setFormData((prev) => ({ ...prev, photo: processedFile }))
-        setPhotoPreview(preview)
+        updatePhotoPreview(processedFile)
       } catch (imageError) {
         setFormData((prev) => ({ ...prev, photo: null }))
-        setPhotoPreview('')
+        updatePhotoPreview(null)
         setError(imageError instanceof Error ? imageError.message : 'Greška pri obradi slike.')
       } finally {
         setImageProcessing(false)
@@ -630,12 +805,11 @@ export default function ReportPageClient() {
 
     try {
       const processedFile = await processImageToWebp({ sourceUrl: sourceImageUrl.trim() })
-      const preview = await readBlobAsDataUrl(processedFile)
       setFormData((prev) => ({ ...prev, photo: processedFile }))
-      setPhotoPreview(preview)
+      updatePhotoPreview(processedFile)
     } catch (imageError) {
       setFormData((prev) => ({ ...prev, photo: null }))
-      setPhotoPreview('')
+      updatePhotoPreview(null)
       setError(imageError instanceof Error ? imageError.message : 'Greška pri obradi slike sa URL adrese.')
     } finally {
       setImageProcessing(false)
@@ -721,6 +895,10 @@ export default function ReportPageClient() {
 
       if (dbError) throw dbError
 
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem(REPORT_DRAFT_STORAGE_KEY)
+      }
+
       setSuccess(true)
       setTimeout(() => {
         router.push('/map')
@@ -758,6 +936,12 @@ export default function ReportPageClient() {
         <p className="text-gray-600 mb-8">Pomoć nam da poboljšamo infrastrukturu!</p>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-8">
+          {draftNotice && (
+            <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-blue-800">
+              {draftNotice}
+            </div>
+          )}
+
           {error && (
             <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
               {error}
@@ -812,7 +996,7 @@ export default function ReportPageClient() {
             <label className="block text-sm font-medium mb-2">Fotografija problema</label>
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
               <p className="text-sm text-gray-600 mb-3">
-                Možete otpremiti sliku ili uneti izvorni URL. Slika se automatski centrira na kvadrat i pretvara u WebP pre čuvanja u bucket-u.
+                Možete otpremiti sliku ili uneti izvorni URL. Slika zadržava odnos stranica i pretvara se u WebP pre čuvanja u bucket-u.
               </p>
               <input
                 type="file"
@@ -848,19 +1032,19 @@ export default function ReportPageClient() {
                 Ako sajt sa slike blokira direktno preuzimanje iz pregledača, preuzmite sliku ručno i otpremite je kao fajl.
               </p>
               {photoPreview && (
-                <div className="relative mt-4 h-48 overflow-hidden rounded-lg">
+                <div className="relative mt-4 h-56 overflow-hidden rounded-lg border border-gray-200 bg-gray-100">
                   <Image
                     src={photoPreview}
                     alt="Preview"
                     fill
                     unoptimized
-                    className="object-cover"
+                    className="object-contain"
                   />
                 </div>
               )}
               {formData.photo && (
                 <p className="mt-3 text-sm text-green-700">
-                  Slika je pripremljena za upload kao kvadratni <strong>WebP</strong>.
+                  Slika je pripremljena za upload kao <strong>WebP</strong> bez isecanja portretnog kadra.
                 </p>
               )}
             </div>
@@ -871,6 +1055,17 @@ export default function ReportPageClient() {
               <strong>Lokacija:</strong> {formData.latitude.toFixed(4)}, {formData.longitude.toFixed(4)}
             </p>
             <p className="mt-2 text-sm text-gray-600">{locationMessage}</p>
+            <div className="mt-4 rounded-lg border border-blue-200 bg-white p-4">
+              <label className="block text-sm font-medium mb-2">Izaberite tačku na mapi</label>
+              <p className="mb-3 text-xs text-gray-500">
+                Dodirnite mapu ili prevucite marker ako želite precizniju lokaciju od trenutne GPS pozicije.
+              </p>
+              <ReportLocationPickerMap
+                latitude={formData.latitude}
+                longitude={formData.longitude}
+                onPick={handleMapLocationPick}
+              />
+            </div>
             {pickerAllowed && (
               <div className="mt-4 rounded-lg border border-blue-200 bg-white p-4">
                 <label className="block text-sm font-medium mb-2">Brzi izbor mesta</label>

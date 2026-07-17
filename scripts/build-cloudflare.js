@@ -7,7 +7,6 @@ function run(command, args, extraEnv = {}) {
   return new Promise((resolve, reject) => {
     const env = {
       ...process.env,
-      CI: '1',
       NO_UPDATE_NOTIFIER: '1',
       npm_config_update_notifier: 'false',
       YARN_ENABLE_TELEMETRY: '0',

@@ -10,10 +10,13 @@ if (
 }
 
 const distDir = process.env.NEXT_DIST_DIR?.trim() || '.next'
+const disablePwaForWindowsStandalone =
+  process.platform === 'win32' && process.env.NEXT_PRIVATE_STANDALONE === 'true'
 
 const config: NextConfig = {
   reactStrictMode: true,
   distDir,
+  outputFileTracingRoot: process.cwd(),
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -34,4 +37,5 @@ export default withPWA({
   dest: 'public',
   register: true,
   skipWaiting: true,
+  disable: disablePwaForWindowsStandalone,
 })(config)

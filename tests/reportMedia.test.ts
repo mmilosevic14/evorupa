@@ -6,7 +6,6 @@ import {
   getReportPhotoUrl,
 } from '@/lib/reportMedia'
 import {
-  getCenteredSquareCrop,
   getScaledImageDimensions,
   MAX_IMAGE_DIMENSION,
   WEBP_QUALITY,
@@ -33,17 +32,9 @@ describe('reportMedia', () => {
     expect(getScaledImageDimensions(640, 480)).toEqual({ width: 640, height: 480 })
   })
 
-  it('uses a centered square crop before resizing report images', () => {
-    expect(getCenteredSquareCrop(1200, 2400)).toEqual({
-      sourceX: 0,
-      sourceY: 600,
-      sourceSize: 1200,
-    })
-    expect(getCenteredSquareCrop(2400, 1200)).toEqual({
-      sourceX: 600,
-      sourceY: 0,
-      sourceSize: 1200,
-    })
+  it('preserves portrait and landscape aspect ratios during resizing', () => {
+    expect(getScaledImageDimensions(1080, 1920)).toEqual({ width: 450, height: 800 })
+    expect(getScaledImageDimensions(1920, 1080)).toEqual({ width: 800, height: 450 })
   })
 
   it('uses a non-premium webp quality setting to save space', () => {
