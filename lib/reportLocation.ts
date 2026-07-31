@@ -41,6 +41,9 @@ const LOCATION_TAG_PREFIXES = {
   region: 'region:',
 } as const
 
+// These prefixes are a persisted data contract inside reports.tags, not just UI helpers.
+// Renaming them without migrating historical rows will break grouping and filtering.
+
 const SERBIAN_COLLATOR = new Intl.Collator('sr', {
   sensitivity: 'base',
   numeric: true,

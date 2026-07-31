@@ -18,6 +18,8 @@ export async function getCurrentAdminState() {
     .eq('id', user.id)
     .maybeSingle()
 
+  // Keep all known admin signals during migration windows. Some users can have a valid admin
+  // state in auth metadata before the mirrored public.users row is fully caught up, or vice versa.
   const isAdmin = Boolean(
     profile?.is_admin ||
     profile?.role === 'admin' ||

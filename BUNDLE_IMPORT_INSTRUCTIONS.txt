@@ -1,0 +1,10 @@
+Bundle archive contents:
+- evorupa-main-2fcf6da.bundle
+
+On another machine:
+
+git clone https://github.com/mmilosevic14/evorupa.git
+cd evorupa
+git bundle verify ..\evorupa-main-2fcf6da.bundle
+git pull ..\evorupa-main-2fcf6da.bundle HEAD
+git push origin main

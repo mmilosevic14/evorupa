@@ -15,6 +15,8 @@ export function getPendingFocusAction(
   selectedPlaceKey: string,
   selectedReports: Pick<Report, 'id'>[],
 ) : PendingFocusAction {
+  // Focus is intentionally staged: district must settle first, then place, then the report
+  // itself can be focused once it is present in the active filtered result set.
   if (!pendingFocusRequest) {
     return 'wait'
   }

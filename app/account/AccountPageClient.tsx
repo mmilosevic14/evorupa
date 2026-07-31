@@ -471,15 +471,20 @@ export default function AccountPageClient() {
               {reports.map((report) => {
                 const isEditing = editingReportId === report.id && editableReport
                 const location = parseReportLocation(report.tags)
+                const cardLinkProps = isEditing
+                  ? {}
+                  : {
+                      role: 'link' as const,
+                      tabIndex: 0,
+                      onClick: () => router.push(`/map?report=${report.id}`),
+                      onKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) => handleReportCardKeyDown(event, report.id),
+                    }
 
                 return (
                   <div
                     key={report.id}
-                    role="link"
-                    tabIndex={0}
-                    onClick={() => router.push(`/map?report=${report.id}`)}
-                    onKeyDown={(event) => handleReportCardKeyDown(event, report.id)}
-                    className="rounded-xl border border-gray-200 p-5 cursor-pointer transition hover:border-secondary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/40"
+                    {...cardLinkProps}
+                    className={`rounded-xl border border-gray-200 p-5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/40 ${isEditing ? 'cursor-default' : 'cursor-pointer hover:border-secondary/40 hover:shadow-md'}`}
                   >
                     {isEditing ? (
                       <div className="space-y-4">

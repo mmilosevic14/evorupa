@@ -24,6 +24,8 @@ export default function ConsentManager({ initialConsent }: ConsentManagerProps) 
     const storedConsent = parseConsentState(window.localStorage.getItem(CONSENT_COOKIE_NAME) ?? undefined)
 
     if (storedConsent && storedConsent !== consent) {
+      // The cookie is needed for server-rendered consent bootstrap, while localStorage lets the
+      // client recover an already-made choice if the cookie is missing or stale.
       setConsent(storedConsent)
       persistConsent(storedConsent)
     }
@@ -37,6 +39,7 @@ export default function ConsentManager({ initialConsent }: ConsentManagerProps) 
   return (
     <>
       {consent === 'accepted' && (
+        // GTM is fully app-gated: when consent is rejected we do not load it at all.
         <Script id="gtm-loader" strategy="afterInteractive">
           {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
