@@ -6,6 +6,9 @@ export const middleware = async (request: NextRequest) => {
   const authError = requestUrl.searchParams.get('error')
   const authErrorDescription = requestUrl.searchParams.get('error_description')
 
+  // OAuth providers can send users back to arbitrary app routes with auth query params.
+  // We normalize all of those returns through one callback handler so session exchange and
+  // post-login redirect logic stay consistent no matter where auth started.
   if ((authCode || authError || authErrorDescription) && requestUrl.pathname !== '/auth/callback') {
     const callbackUrl = requestUrl.clone()
     callbackUrl.pathname = '/auth/callback'

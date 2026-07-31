@@ -187,6 +187,12 @@ docker run -p 3000:3000 evorupa
 
 ## 📚 Dokumentacija
 
+- [Arhitektura i ključne invarijante](./ARCHITECTURE.md)
+- [Komponente i njihove invarijante](./components/README.md)
+- [Client komponente po rutama](./app/CLIENT_COMPONENTS.md)
+- [Lib utility sloj](./lib/README.md)
+- [API rute](./app/api/README.md)
+- [Feature vodiči](./docs/features/auth.md), [mapa](./docs/features/map.md), [prijava problema](./docs/features/report-creation.md), [deployment](./docs/features/deployment.md)
 - [Agent operating notes](./AGENTS.md)
 - [Upgrade migration plan](./UPGRADE_MIGRATION_PLAN.md)
 - [Supabase scaffold](./supabase/README.md)

@@ -1,53 +1,88 @@
 # Push to GitHub
 
-After making changes locally, push them to GitHub with:
+This repository currently uses `main` as the default branch and HTTPS remote:
 
-```bash
-cd evorupa
-
-# Add all changes
-git add .
-
-# Commit with a message
-git commit -m "Add Supabase integration with auth pages
-
-- Install @supabase/supabase-js and @supabase/ssr
-- Add .env.local with Supabase credentials
-- Create utils/supabase/ helpers (server, client, middleware)
-- Add middleware.ts for session management
-- Create auth pages (login, signup)
-- Update lib/supabase.ts with types
-- Add SUPABASE_INTEGRATION.md documentation"
-
-# Push to GitHub
-git push origin master
+```powershell
+git remote -v
+# origin  https://github.com/mmilosevic14/evorupa.git (fetch)
+# origin  https://github.com/mmilosevic14/evorupa.git (push)
 ```
 
-**Your repository:** https://github.com/mmilosevic14/evorupa.git
+## Standard Push Flow
 
-**Default branch:** master
-
----
-
-## First Time Push
-
-If this is your first push to GitHub:
-
-```bash
-git remote add origin https://github.com/mmilosevic14/evorupa.git
-git branch -M master
-git push -u origin master
+```powershell
+git status --short
+git add <files>
+git commit -m "Your commit message"
+git push origin main
 ```
 
----
+## GitHub CLI Setup For This Machine
 
-## Commits so far:
+System MSI install of GitHub CLI is blocked by local policy on this workstation, so a portable copy was installed under the current user profile:
 
-1. ✅ fcd5ff9 - Initial project setup
-2. ✅ 77259c3 - Add documentation & Docker setup
-3. ✅ 0396ea4 - Add project summary
-4. ⏳ (new) - Supabase integration
+```powershell
+$env:LOCALAPPDATA\Programs\GitHubCLI\gh.exe
+```
 
----
+Authenticate with:
 
-Made with ❤️ for Serbia's infrastructure! 🚧
+```powershell
+& "$env:LOCALAPPDATA\Programs\GitHubCLI\gh.exe" auth login
+& "$env:LOCALAPPDATA\Programs\GitHubCLI\gh.exe" auth status
+```
+
+The current GitHub account for this repo is expected to be:
+
+```text
+mmilosevic14
+```
+
+## Saved Git Credential Settings
+
+Global Git is configured to let GitHub CLI provide GitHub HTTPS credentials:
+
+```powershell
+git config --global credential.https://github.com.helper ""
+git config --global credential.https://github.com.helper "!'C:\Users\mmilosev\AppData\Local\Programs\GitHubCLI\gh.exe' auth git-credential"
+git config --global credential.https://gist.github.com.helper ""
+git config --global credential.https://gist.github.com.helper "!'C:\Users\mmilosev\AppData\Local\Programs\GitHubCLI\gh.exe' auth git-credential"
+```
+
+This repository also has a repo-local helper entry for Git for Windows shell execution:
+
+```powershell
+git config --local credential.helper ""
+git config --local credential.helper "!/c/Users/mmilosev/AppData/Local/Programs/GitHubCLI/gh.exe auth git-credential"
+```
+
+## If Push Still Fails With HTTP 403
+
+On this network, `git push origin main` can still fail even after successful `gh auth login` because outbound GitHub write traffic is being blocked or rewritten by local network security tooling.
+
+Checks that already succeeded locally:
+
+```powershell
+& "$env:LOCALAPPDATA\Programs\GitHubCLI\gh.exe" auth status
+& "$env:LOCALAPPDATA\Programs\GitHubCLI\gh.exe" api repos/mmilosevic14/evorupa --jq ".permissions.push"
+```
+
+If those pass but `git push origin main` still returns `HTTP 403`, use one of these recovery paths:
+
+1. Push from a shell or machine that is not behind the current proxy/security filter.
+2. Switch the repo to SSH and push with a GitHub SSH key.
+3. Re-run authentication, then retry `git push origin main` from your own terminal session.
+
+## Current Verified Fix
+
+The account-page navigation fix was committed locally as:
+
+```text
+52ee730 Fix account report edit card navigation
+```
+
+If you need to re-apply just that change onto another branch state:
+
+```powershell
+git cherry-pick 52ee730
+```

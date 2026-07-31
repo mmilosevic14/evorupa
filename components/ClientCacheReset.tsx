@@ -20,6 +20,8 @@ export default function ClientCacheReset() {
 
       let changed = false
 
+      // This is a targeted recovery path for stale PWA/service-worker state after the Supabase
+      // project cutover. It should only advance when we knowingly need another client reset.
       if ('serviceWorker' in navigator) {
         const registrations = await navigator.serviceWorker.getRegistrations()
 
