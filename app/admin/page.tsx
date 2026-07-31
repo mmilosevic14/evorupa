@@ -1,7 +1,26 @@
 import AdminPageClient from './AdminPageClient'
 import { getCurrentAdminState } from '@/lib/adminAccess'
+import { cookies } from 'next/headers'
+import { createClient } from '@/utils/supabase/server'
+import type { Report } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
+
+async function loadReports(): Promise<Report[]> {
+  const cookieStore = await cookies()
+  const supabase = await createClient(cookieStore)
+  const { data, error } = await supabase
+    .from('reports')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  if (error || !data) {
+    console.error('Admin reports load failed:', error)
+    return []
+  }
+
+  return data as Report[]
+}
 
 export default async function AdminPage() {
   const { isAdmin } = await getCurrentAdminState()
@@ -19,5 +38,7 @@ export default async function AdminPage() {
     )
   }
 
-  return <AdminPageClient />
+  const reports = await loadReports()
+
+  return <AdminPageClient initialReports={reports} />
 }

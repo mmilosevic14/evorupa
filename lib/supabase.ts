@@ -25,6 +25,7 @@ export type Database = {
           tags: string[] | null
           upvotes: number | null
           views: number | null
+          approved?: boolean | null
           created_at: string
           updated_at: string
           resolved_at: string | null
